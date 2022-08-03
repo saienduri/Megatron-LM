@@ -45,7 +45,7 @@ def load(args):
     _create_build_dir(buildpath)
 
     # Helper function to build the kernels.
-    def _cpp_extention_load_helper(name, sources, extra_cuda_flags, extra_include_paths):
+    def _cpp_extention_load_helper(name, sources, extra_cuda_flags):
         if torch.version.hip is not None:
             return cpp_extension.load(
                 name=name,
@@ -53,7 +53,7 @@ def load(args):
                 build_directory=buildpath,
                 extra_cflags=['-O3',],
                 extra_cuda_cflags=['-O3'] + extra_cuda_flags + cc_flag,
-                extra_include_paths=extra_include_paths,
+                extra_include_paths=[os.path.abspath(srcpath)],
                 verbose=(args.rank == 0)
             )
         else:
@@ -72,11 +72,6 @@ def load(args):
     # Fused softmax.
     # ==============
 
-    if torch.version.hip is not None:
-        extra_include_paths=[os.path.abspath(srcpath)]
-    else:
-        extra_include_paths=[]
-
     if args.masked_softmax_fusion:
         if torch.version.hip is not None:
              extra_cuda_flags = ['-D__HIP_NO_HALF_OPERATORS__=1',
@@ -92,13 +87,13 @@ def load(args):
                  srcpath / 'scaled_upper_triang_masked_softmax_cuda.cu']
         scaled_upper_triang_masked_softmax_cuda = _cpp_extention_load_helper(
             "scaled_upper_triang_masked_softmax_cuda",
-            sources, extra_cuda_flags, extra_include_paths)
+            sources, extra_cuda_flags)
 
         # Masked softmax.
         sources=[srcpath / 'scaled_masked_softmax.cpp',
                  srcpath / 'scaled_masked_softmax_cuda.cu']
         scaled_masked_softmax_cuda = _cpp_extention_load_helper(
-            "scaled_masked_softmax_cuda", sources, extra_cuda_flags, extra_include_paths)
+            "scaled_masked_softmax_cuda", sources, extra_cuda_flags)
 
     # =================================
     # Mixed precision fused layer norm.
@@ -112,7 +107,7 @@ def load(args):
     sources=[srcpath / 'layer_norm_cuda.cpp',
              srcpath / 'layer_norm_cuda_kernel.cu']
     fused_mix_prec_layer_norm_cuda = _cpp_extention_load_helper(
-        "fused_mix_prec_layer_norm_cuda", sources, extra_cuda_flags, extra_include_paths)
+        "fused_mix_prec_layer_norm_cuda", sources, extra_cuda_flags)
 
 
 def _get_cuda_bare_metal_version(cuda_dir):
