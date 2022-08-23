@@ -1,3 +1,5 @@
+This branch is a copy of https://github.com/microsoft/Megatron-DeepSpeed
+
 ## Megatron-DeepSpeed
 DeepSpeed version of NVIDIA's Megatron-LM that adds additional support for several features such as MoE model training, Curriculum Learning, 3D Parallelism, and others.
 
