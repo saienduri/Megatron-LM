@@ -84,7 +84,7 @@ MIN_LR=1.2e-5
 ### Training duration configs
 ## The main termination condition, original GPT-3 paper trains for 300B tokens
 ## For MoE model, we found sometimes training a bit more to 330B tokens helps
-TRAIN_TOKENS=69905066
+TRAIN_TOKENS=300000000000
 # TRAIN_TOKENS=330000000000
 
 ## TRAIN_SAMPLES is another termination condition and also affect the number of 
@@ -110,7 +110,7 @@ LR_DECAY_TOKENS=260000000000
 ### Parallelism configs
 ## Micro batch size per GPU
 ## Make sure that BATCH_SIZE <= GLOBAL_BATCH_SIZE*PP_SIZE*MP_SIZE/NUM_GPUS
-BATCH_SIZE=2
+BATCH_SIZE=4
 
 ## Model parallelism, 1 is no MP
 ## Currently MoE models have divergence issue when MP > 1.
@@ -179,8 +179,8 @@ SAVE_INTERVAL=1000
 INIT_STD=0.01
 
 ## Activation checkpointing saves GPU memory, but reduces training speed
-#ACTIVATION_CHECKPOINT="true"
-ACTIVATION_CHECKPOINT="false"
+ACTIVATION_CHECKPOINT="true"
+# ACTIVATION_CHECKPOINT="false"
 ###############################################################################
 ### Output and data configs
 current_time=$(date "+%Y.%m.%d-%H.%M.%S")
@@ -251,6 +251,7 @@ data_options=" \
          --data-path ${DATA_BLEND} \
          --data-impl mmap"
         
+# NOTE: Replace args.train_iters = iterations with args.train_iters = 100 in ~/Megatron-LM/megatron/training.py to run this workload only for 100 iters
 megatron_options=" \
         --override-lr-scheduler \
         --adam-beta1 0.9 \
@@ -267,6 +268,7 @@ megatron_options=" \
         --lr-warmup-tokens ${WARMUP_TOKENS} \
         --micro-batch-size ${BATCH_SIZE} \
         --exit-duration-in-mins ${EXIT_DURATION} \
+        --rampup-batch-size 32 32 4882812 \
         --global-batch-size ${GLOBAL_BATCH_SIZE} \
         --num-layers ${NUM_LAYERS} \
         --hidden-size ${HIDDEN_SIZE} \
@@ -288,6 +290,8 @@ megatron_options=" \
         --hysteresis 2 \
         --num-workers 0 \
         --fp16 \
+        --load ${CHECKPOINT_PATH} \
+        --save ${CHECKPOINT_PATH} \
         --tensorboard-queue-size 1 \
         --log-timers-to-tensorboard \
         --log-batch-size-to-tensorboard \
