@@ -47,7 +47,7 @@ def get_language_model(num_tokentypes, add_pooler,
                        encoder_attn_mask_type, init_method=None,
                        scaled_init_method=None, add_decoder=False,
                        decoder_attn_mask_type=AttnMaskType.causal,
-                       pre_process=True, post_process=True, num_experts=1):
+                       pre_process=True, post_process=True, num_experts=[1]):
     """Build language model and return along with the key to save."""
     args = get_args()
 
@@ -312,7 +312,7 @@ class TransformerLanguageModel(MegatronModule):
                  add_pooler=False,
                  pre_process=True,
                  post_process=True,
-                 num_experts=1):
+                 num_experts=[1]):
         super(TransformerLanguageModel, self).__init__()
         args = get_args()
 
@@ -427,7 +427,7 @@ class TransformerLanguageModel(MegatronModule):
     def state_dict_for_save_checkpoint(self, destination=None, prefix='',
                                        keep_vars=False):
         """For easy load."""
-
+        args = get_args()
         state_dict_ = {}
         moe_state_dict = {}
         if self.pre_process:
@@ -436,6 +436,15 @@ class TransformerLanguageModel(MegatronModule):
                     destination, prefix, keep_vars)
         encoder_state_dict = self.encoder.state_dict_for_save_checkpoint(
                 destination, prefix, keep_vars)
+        if args.random_ltd:
+            # When using random-LTD, it is required to call remove_random_ltd_state_dict
+            # during model checkpoint saving to transfer the random-LTD-wrapped
+            # layers back to original layers. This will help to remove the dependency
+            # to random-LTD inside the checkpoint, so that during evaluation or
+            # finetuning of the checkpoint there is no need to depend on random-LTD
+            # again.
+            from deepspeed.runtime.data_pipeline.data_routing.helper import remove_random_ltd_state_dict
+            encoder_state_dict = remove_random_ltd_state_dict(encoder_state_dict)
         # MoE states need to be handled separately by DeepSpeed engine, thus
         # moving them to the top level dictionary
         # If components other than encoder may contain MoE states, need to add

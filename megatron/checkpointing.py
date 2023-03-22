@@ -19,7 +19,7 @@ import os
 import random
 import sys
 import numpy as np
-
+from deepspeed.accelerator import get_accelerator
 import torch
 
 from megatron import (get_args,
@@ -58,7 +58,7 @@ def check_checkpoint_args(checkpoint_args):
                             arg_name, checkpoint_value, args_value)
         assert checkpoint_value == args_value, error_message
 
-    if not args.mos:
+    if not args.mos and not args.kd:
         _compare('num_layers')
     _compare('hidden_size')
     _compare('num_attention_heads')
@@ -137,7 +137,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
                 for i in range(len(model)):
                     mpu.set_virtual_pipeline_model_parallel_rank(i)
                     state_dict['model%d' % i] = model[i].state_dict_for_save_checkpoint()
-            
+
             # Optimizer stuff.
             if not args.no_save_optim:
                 if optimizer is not None:
@@ -150,7 +150,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
             state_dict['random_rng_state'] = random.getstate()
             state_dict['np_rng_state'] = np.random.get_state()
             state_dict['torch_rng_state'] = torch.get_rng_state()
-            state_dict['cuda_rng_state'] = torch.cuda.get_rng_state()
+            state_dict['cuda_rng_state'] = get_accelerator().get_rng_state()
             state_dict['rng_tracker_states'] \
                 = mpu.get_cuda_rng_tracker().get_states()
 
@@ -169,6 +169,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
 
         # Saving is a collective communication
         checkpoint_name = get_checkpoint_name(args.save, iteration)
+
         # Trim off the filename and mp_rank_* directory.
         for _ in range(3):
             checkpoint_name = os.path.dirname(checkpoint_name)
@@ -200,7 +201,8 @@ def _transpose_first_dim(t, num_splits, num_splits_first, model):
     # specific to self attention so should work for cross attention as well
     while hasattr(model, 'module'):
         model = model.module
-    attention_module = model.language_model.encoder.layers[0].self_attention
+    #attention_module = model.language_model.encoder.layers[0].self_attention
+    attention_module = model.language_model.encoder.layers[0].attention
     hidden_size_per_attention_head = attention_module.hidden_size_per_attention_head
     num_attention_heads_per_partition = attention_module.num_attention_heads_per_partition
     if num_splits_first:
@@ -272,7 +274,13 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
     load_dir = getattr(args, load_arg)
 
     if args.deepspeed:
-        loaded_dir, state_dict = model[0].load_checkpoint(load_dir,load_module_strict=strict)
+        if args.finetune:
+            loaded_dir, state_dict = model[0].load_checkpoint(load_dir,
+                load_module_strict=strict, load_optimizer_states=False,
+                load_lr_scheduler_states=False, load_module_only=True)
+        else:
+            loaded_dir, state_dict = model[0].load_checkpoint(load_dir,
+                load_module_strict=strict)
         if loaded_dir is None:
             print_rank_0('WARNING: could not find the metadata file {} '.format(
                 load_dir))
@@ -309,7 +317,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
                         tracker_filename))
                     sys.exit()
 
-        if not args.mos:
+        if not args.mos and not args.kd:
             assert iteration > 0 or release, 'error parsing metadata file {}'.format(
                 tracker_filename)
 
@@ -342,6 +350,8 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
     # Set iteration.
     if args.finetune or release or args.reset_iteration or load_only_weights:
         iteration = 0
+        # Make DeepSpeed engine aware of this reset of iteration
+        model[0].global_steps = 0
     else:
         try:
             iteration = state_dict['iteration']
@@ -357,7 +367,8 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
                 sys.exit()
 
     # Check arguments.
-    if not load_only_weights:
+    reset_train_valid_samples = args.reset_iteration
+    if not load_only_weights and not reset_train_valid_samples:
         assert args.consumed_train_samples == 0
         assert args.consumed_valid_samples == 0
         if 'args' in state_dict:
@@ -406,7 +417,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
             random.setstate(state_dict['random_rng_state'])
             np.random.set_state(state_dict['np_rng_state'])
             torch.set_rng_state(state_dict['torch_rng_state'])
-            torch.cuda.set_rng_state(state_dict['cuda_rng_state'])
+            get_accelerator().set_rng_state(state_dict['cuda_rng_state'])
             # Check for empty states array
             if not state_dict['rng_tracker_states']:
                 raise KeyError
@@ -432,7 +443,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
 def load_biencoder_checkpoint(model, only_query_model=False,
         only_context_model=False, custom_load_path=None):
     """
-    selectively load retrieval models for indexing/retrieving 
+    selectively load retrieval models for indexing/retrieving
     from saved checkpoints
     """
 

@@ -108,12 +108,13 @@ class GPTModel(MegatronModule):
                 # input_ids, position_ids, labels have size [batch size, seqlen]
                 input_ids = input_ids[:, :curriculum_seqlen].contiguous()
                 position_ids = position_ids[:, :curriculum_seqlen].contiguous()
-                labels = labels[:, :curriculum_seqlen].contiguous()
+                if labels is not None:
+                    labels = labels[:, :curriculum_seqlen].contiguous()
 
                 # attention_mask has size [1, 1, seqlen, seqlen]
                 attention_mask = attention_mask[:, :, :curriculum_seqlen, :curriculum_seqlen].contiguous()
         else:
-            if args.curriculum_learning:
+            if args.curriculum_learning_legacy:
                 # If got a None input, need to reset curriculum_seqlen on user side
                 args.curriculum_seqlen = args.seq_length
 
