@@ -1,6 +1,6 @@
 __pycache__
 
-# Distribution / packaging
+# distribution / packaging
 build/
 dist/
 *.egg-info/
@@ -11,8 +11,15 @@ dist/
 # tmp files
 *.swp
 
-# AML workspace config file
-config.json
+# AML workspace config files
+*config.json
+
+# dependencies
+DeepSpeed/
+flash-attention/
+
+# logs
+*.log
 
 .coverage_*
 *~

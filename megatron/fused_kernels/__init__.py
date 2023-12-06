@@ -46,7 +46,11 @@ def load(args):
     # Helper function to build the kernels.
     def _cpp_extention_load_helper(name, sources, extra_cuda_flags, extra_include_paths):
         if torch.version.hip is not None:
-            extra_cuda_cflags=['-O3'] + extra_cuda_flags + cc_flag
+            extra_cuda_cflags=['-O3',
+#                               '--offload-arch=gfx940',
+#                               '--offload-arch=gfx941',
+                               '--offload-arch=gfx942',
+                               '-ffast-math'] + extra_cuda_flags + cc_flag
         else:
             extra_cuda_cflags=['-O3',
                                '-gencode', 'arch=compute_70,code=sm_70',
@@ -74,12 +78,12 @@ def load(args):
     if args.masked_softmax_fusion:
         if torch.version.hip is not None:
              extra_cuda_flags = ['-D__HIP_NO_HALF_OPERATORS__=1',
-                                '-D__HIP_NO_HALF_CONVERSIONS__=1']
+                                 '-D__HIP_NO_HALF_CONVERSIONS__=1']
         else:
              extra_cuda_flags = ['-U__CUDA_NO_HALF_OPERATORS__',
-                                '-U__CUDA_NO_HALF_CONVERSIONS__',
-                                '--expt-relaxed-constexpr',
-                                '--expt-extended-lambda']
+                                 '-U__CUDA_NO_HALF_CONVERSIONS__',
+                                 '--expt-relaxed-constexpr',
+                                 '--expt-extended-lambda']
         
         # Upper triangular softmax.
         sources=[srcpath / 'scaled_upper_triang_masked_softmax.cpp',

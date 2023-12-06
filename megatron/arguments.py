@@ -731,6 +731,9 @@ def _add_logging_args(parser):
                        action='store_true',
                        help='If set, write various optimizer states to '
                        'tensorboard. This feature may consume extra GPU memory.')
+    group.add_argument('--log-roctx-annotation-trace',
+                       action='store_true',
+                       help='If set, write roctx annotation trace to json.')
     group.add_argument('--log-memory-to-tensorboard',
                        action='store_true',
                        help='Enable memory logging to tensorboard.')
@@ -882,6 +885,8 @@ def _add_training_args(parser):
     group.add_argument('--no-bias-dropout-fusion', action='store_false',
                        help='Disable bias and dropout fusion.',
                        dest='bias_dropout_fusion')
+#    group.add_argument('--use-flash-attn', action='store_true',
+#                       help='use FlashAttention implementation of attention.')
     group.add_argument('--disable-moe-token-dropping', action='store_false',
                        help='Disable MoE expert token dropping.',
                        dest='moe_token_dropping')

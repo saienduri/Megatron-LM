@@ -45,7 +45,7 @@ def model_provider(pre_process=True, post_process=True):
     args = get_args()
     config = core_transformer_config_from_args(args)
 
-    print_rank_0('building GPT model ...')
+    print_rank_0('[generate_samples_gpt.py] building GPT model ...')
     model = GPTModel(config=config, num_tokentypes=0, parallel_output=False,
                      pre_process=pre_process, post_process=post_process,
                      return_moe_loss=False) # we need to set "return_moe_loss" for the inference_mode

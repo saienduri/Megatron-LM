@@ -42,9 +42,10 @@ def get_model_provider(eval_metric):
             raise NotImplementedError('output type for {} evaluation metric '
                                       'is not supported.'.format(eval_metric))
 
-        print_rank_0('building GPT model ...')
+        print_rank_0('[evaluate.py] building GPT model ...')
         model = GPTModel(config=config, num_tokentypes=0, parallel_output=parallel_output,
-                         pre_process=pre_process, post_process=post_process)
+                         pre_process=pre_process, post_process=post_process,
+                         return_moe_loss=False)
 
         return model
 
@@ -104,7 +105,7 @@ def forward_step(batch, model, eval_metric):
 
         # For accuracy, return the number of correctly predicted samples.
         if eval_metric == 'accuracy':
-            outputs = torch.argmax(output, -1)
+            outputs = torch.argmax(output, dim=-1)
             correct = (outputs == labels).float()
             correct[(1 - loss_mask).bool()] = 1
             correct = correct.prod(-1)

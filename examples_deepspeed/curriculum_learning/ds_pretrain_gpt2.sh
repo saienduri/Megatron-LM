@@ -66,8 +66,7 @@ MERGE_PATH=/vc_data/Megatron-LM/data/gpt2-merges.txt
 stage=1
 
 current_time=$(date "+%Y.%m.%d-%H.%M.%S")
-script_path=$(realpath $0)
-script_dir=$(dirname $script_path)
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 host="${HOSTNAME}"
 
 if [ "${CONFIG_TEMPLATE}" = "true" ]; then
@@ -111,7 +110,7 @@ gpt_options=" \
         --data-impl mmap \
         --split 949,50,1 \
         --distributed-backend nccl \
-        --override-opt_param-scheduler \
+        --override-lr-scheduler \
         --lr $LR \
         --lr-decay-style cosine \
         --min-lr 1.0e-5 \

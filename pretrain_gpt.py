@@ -31,7 +31,7 @@ import torch.nn.functional as F
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
 
-    print_rank_0('building GPT model ...')
+    print_rank_0('[pretrain_gpt.py] building GPT model ...')
     see_memory_usage(f"Before Building Model", force=True)
 
     args = get_args()

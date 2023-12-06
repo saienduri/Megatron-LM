@@ -272,6 +272,11 @@ def throughput_calculator(model, args, iteration_time, total_iterations):
     approx_parameters_in_billions = None if (model is None) else get_parameters_in_billions(model)
     elapsed_time_per_iter = iteration_time/total_iterations
     samples_per_second = batch_size / elapsed_time_per_iter
+#    print('batch_size =', batch_size)
+#    print('elapsed_time_per_iter =', elapsed_time_per_iter)
+#    print('iteration_time =', iteration_time)
+#    print('total_iterations =', total_iterations)
+#    print('samples_per_second =', samples_per_second)
 
     #flops calculator
     hidden_size = args.hidden_size

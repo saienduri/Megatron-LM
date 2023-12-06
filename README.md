@@ -1,3 +1,172 @@
+# Setup
+## 1. Launch Docker container
+To ensure everything works smoothly, it's best to use a Docker container. For example, you can pull the ROCm 5.6 Docker image with PyTorch 2.0.1 from Docker Hub. Then, launch the container with this command:
+```bash
+docker pull rocm/pytorch:rocm5.6_ubuntu20.04_py3.8_pytorch_2.0.1
+docker run -it --ipc=host --network=host --device=/dev/kfd --device=/dev/dri \
+           --group-add video --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+           --name=megatron-deepspeed rocm/pytorch:rocm5.6_ubuntu20.04_py3.8_pytorch_2.0.1 /bin/bash
+```
+
+## 2. Install DeepSpeed
+To run Megatron-DeepSpeed, we need to install DeepSpeed first:
+```bash
+git clone --recursive https://github.com/microsoft/DeepSpeed.git
+cd DeepSpeed
+pip install .[dev,1bit,autotuning]
+```
+
+## 3. Install FlashAttention (optional)
+If you are interested in using FlashAttention to accelerate self-attention calculations, kindly ensure its installation prior to use:
+```bash
+git clone --recursive https://github.com/ROCmSoftwarePlatform/flash-attention.git
+cd flash-attention
+patch /opt/conda/envs/py_3.8/lib/python3.8/site-packages/torch/utils/hipify/hipify_python.py hipify_patch.patch
+python setup.py install
+```
+## 4. Clone Megatron-DeepSpeed repository
+Then clone Megatron-DeepSpeed repository and install the dependencies with:
+```bash
+git clone https://github.com/AMD-AI/Megatron-DeepSpeed.git
+cd Megatron-DeepSpeed
+pip3 install -r requirements.txt  # install dependencies
+```
+
+# Training
+In this part, we will show you how to use the script `pretrain_gpt_with_mp.sh` to run Megatron-DeepSpeed training process.
+If you are working with other model sizes, the process is similar, but you will need to use a different script.
+
+## Download dataset
+You can download the BooksCorpus and Oscar datasets by utilizing the helper scripts stored in dataset directory:
+1. BooksCorpus dataset:
+   ```bash
+   cd dataset
+   bash download_books.sh
+   bash download_vocab.sh
+   ```
+2. Oscar dataset:
+   ```bash
+   cd dataset
+   wget https://huggingface.co/bigscience/misc-test-data/resolve/main/stas/oscar-1GB.jsonl.xz
+   xz -d oscar-1GB.jsonl.xz
+   bash download_vocab.sh
+   ```
+
+## Preprocess data
+(Feel free to skip this step if you intend to use the BooksCorpus dataset.)
+To perform data preprocessing, please run the following commands:
+```bash
+export BASE_SRC_PATH=<path/to/source/dir>
+export BASE_DATA_PATH=${BASE_SRC_PATH}/dataset
+
+python ${BASE_SRC_PATH}/tools/preprocess_data.py \
+    --input ${BASE_DATA_PATH}/oscar-1GB.jsonl \
+    --output-prefix ${BASE_DATA_PATH}/my-gpt2 \
+    --vocab ${BASE_DATA_PATH}/gpt2-vocab.json \
+    --dataset-impl mmap \
+    --tokenizer-type GPT2BPETokenizer \
+    --merge-file ${BASE_DATA_PATH}/gpt2-merges.txt \
+    --append-eod \
+    --workers 8
+```
+
+## Run
+Before running Megatron-DeepSpeed, locate the file `pretrain_gpt_with_mp.sh` first (by default, in the directory `${BASE_SRC_PATH}/scripts`).
+Then open the file by using any text editor and confirm that all values of the parameters meet our requirements.
+Especially, make sure the values of the following path variables are correct:
+```bash
+VOCAB_FILE="${VOCAB_FILE:-"/dataset/gpt2-vocab.json"}"
+MERGE_FILE="${MERGE_FILE:-"/dataset/gpt2-merges.txt"}"
+DATA_PATH="${DATA_PATH:-"/dataset/BookCorpusDataset_text_document"}"
+```
+These variables are essential for accessing the dataset during training.
+
+We are now ready to run Megatron-DeepSpeed. The following commands show how to run Megatron-DeepSpeed with a bash script:
+```bash
+./scripts/pretrain_gpt_with_mp.sh
+```
+
+## Split training across multiple nodes
+To enable multi-node training, we use a strategy where we launch separate Docker containers on each node. Our goal is to ensure that these containers can communicate with each other across different nodes.
+To distribute training processes across multiple nodes, please follow the steps below:
+
+(Unless otherwise specified, the scripts listed below are stored in the directory `${BASE_SRC_PATH}/scripts` by default.)
+
+### 1. Locate and update `pretrain_gpt_distributed_docker.sh`
+Find the script `pretrain_gpt_distributed_docker.sh` and make sure to update the arguments of the Docker run command if needed.
+Additionally, the script should also contain instructions for building a Docker image using the Dockerfile file. This is a necessary step for setting up the environment, so please DO NOT remove it.
+
+### 2. Verify and update `run_megatron_example.sh`
+Open the script run_megatron_example.sh and verify that the arguments are correctly set. For more details about the arguments, use `./run_model.sh --help`.
+If necessary, update them so they meet your needs.
+
+### 3. Review hyperparameter settings in `run_model.sh`
+Carefully review the hyperparameter settings in the script `run_model.sh`. Ensure that they meet your specific requirements for the training process.
+Modify the hyperparameters if needed to achieve the desired training configuration.
+
+### 4. Run multi-node training
+Run the script `run_pretrain_gpt.sh` with the following command, replacing `PARTITION_NAME` with the desired partition name and `NUM_NODES` with the desired number of nodes:
+```bash
+./scripts/run_pretrain_gpt.sh PARTITION_NAME NUM_NODES
+```
+For example, if you want to run tasks over 2 nodes with the partition `1CN128C8G2H_2IB_MI210_Ubuntu22`, the command would be:
+```bash
+./scripts/run_pretrain_gpt.sh 1CN128C8G2H_2IB_MI210_Ubuntu22 2
+```
+This will allocate and run tasks on the specified partition with the specified number of nodes.
+
+## Utilize FlashAttention
+For FlashAttention integration, include `--use-flash-attn` in the input arguments. Keep in mind that when employing FlashAttention, the highest supported attention head dimension is 128.
+
+# Evaluation and Tasks
+## Download checkpoints (optional)
+In this section, we illustrate the process of downloading and extracting the pretrained GPT-345M checkpoints.
+For more specific information about these checkpoints, please refer to [GPT-345M](https://catalog.ngc.nvidia.com/orgs/nvidia/models/megatron_lm_345m).
+
+To simplify the procedure, we have developed a script that combines all the necessary steps. If you are interested in utilizing different checkpoints, you can adhere to the instructions outlined in the script, adjusting the values as needed to align with your particular needs.
+
+To effortlessly download and unzip the checkpoints, execute the subsequent command:
+```bash
+./dataset/download_ckpt.sh
+```
+
+## WikiText perplexity evaluation
+We evaluate perplexity on the word-level WikiText-103 test dataset, and appropriately compute perplexity given the change in tokens when using our subword tokenizer.
+
+### Download dataset
+We have prepared a script to simplify the process of downloading the WikiText-103 test dataset. You can download the dataset directly by running the script `download_wikitext.sh`:
+```bash
+./dataset/download_wikitext.sh
+```
+
+### Run evaluation
+Prior to initiating the LAMBADA evaluation, locate the file named `eval_gpt2_lambada.sh`. By default, this file can be found in the directory `${BASE_SRC_PATH}/scripts`. Open the file using any text editor and verify that all parameter values align with our requirements.
+
+Specifically, ensure the correctness of the values for the following path variables:
+```bash
+vocab_file="${data_dir}/gpt2-vocab.json"
+merge_file="${data_dir}/gpt2-merges.txt"
+valid_data="${data_dir}/lambada_test.jsonl"
+checkpoint_path="${main_dir}/checkpoints/gpt2_345m"
+```
+These variables are crucial for accessing the dataset and checkpoints during the evaluation process.
+
+With these prerequisites in place, we are prepared to proceed with the evaluation. The subsequent commands outline how to conduct the LAMBADA evaluation using a bash script:
+```bash
+./scripts/eval_gpt2_lambada.sh
+```
+
+## GPT Text Generation
+We have provided a script for GPT text generation. Only few changes need to make. These include specifying the path to the pretrained checkpoint, determining the length of the output samples, and indicating whether the text generation should occur unconditionally (`--num-samples` specifies the number of samples to generate) or conditionally (requiring the use of `--sample-input-file <filename>`, where each line of the file serves as conditional text).
+
+There exist few optional parameters to play, such as top-k, top-p, or greedy (achieved by setting top-k and top-p to 0) sampling.
+Please make sure all the arguments in `gen_text_gpt2.sh` satisfy your requirement. Then you can run GPT text generation with:
+```bash
+./scripts/gen_text_gpt2.sh
+```
+As in previous instances, please make sure the path variables `vocab_file`, `merge_file`, and `checkpoint_path` are correct before starting GPT text generation.
+
+
 ## Latest News
 * [2023/07] Synced with [upstream](https://github.com/NVIDIA/Megatron-LM) over 1k commits, see [rebase folder for more details](https://github.com/microsoft/Megatron-DeepSpeed/tree/main/examples_deepspeed/rebase) in terms of features and updated performance.
 

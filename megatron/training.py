@@ -1159,7 +1159,11 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
     if args.random_ltd:
         assert model[0].random_ltd_enabled()
         args.random_ltd_layer_num = model[0].random_ltd_scheduler.get_random_ltd_layer_num()
-        
+
+    if args.log_roctx_annotation_trace:
+        prof = torch.autograd.profiler.emit_nvtx()
+        prof.__enter__()
+
     while iteration < args.train_iters and (args.train_tokens is None or \
         args.consumed_train_tokens < args.train_tokens):
         update_num_microbatches(args.consumed_train_samples)
@@ -1283,6 +1287,8 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             print_datetime('exiting program at iteration {}'.format(iteration))
             sys.exit()
 
+    if args.log_roctx_annotation_trace:
+        prof.__exit__(None, None, None)
 
     return iteration
 
