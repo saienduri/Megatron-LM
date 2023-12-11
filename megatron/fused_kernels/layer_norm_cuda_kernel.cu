@@ -246,21 +246,21 @@ void cuWelfordMuSigma2(
     }
   }
 }
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
 template<typename U> U rsqrt(U v) {
 #else
 template<typename U> __device__ U rsqrt(U v) {
 #endif
   return U(1) / sqrt(v);
 }
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
 template<> float rsqrt(float v) {
 #else
 template<> __device__ float rsqrt(float v) {
 #endif
   return rsqrtf(v);
 }
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
 template<> double rsqrt(double v) {
 #else
 template<> __device__ double rsqrt(double v) {
@@ -316,7 +316,7 @@ void cuApplyLayerNorm(
   // 1) blockDim.x == warpSize
   // 2) Tensors are contiguous
   //
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
   for (auto i1=blockIdx.y; i1 < n1; i1 += gridDim.y) {
 #else
   for (int i1=blockIdx.y; i1 < n1; i1 += gridDim.y) {
@@ -559,7 +559,7 @@ void cuComputeGradInput(
     const V* gamma,
     T* grad_input)
 {
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
   for (auto i1=blockIdx.y; i1 < n1; i1 += gridDim.y) {
 #else
   for (int i1=blockIdx.y; i1 < n1; i1 += gridDim.y) {
@@ -689,7 +689,7 @@ void HostApplyLayerNorm(
     auto stream = at::cuda::getCurrentCUDAStream().stream();
     const int warp_size = at::cuda::warp_size();
     dim3 threads(warp_size,4,1);
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
     threads.y = 1;
 #endif
     const uint64_t maxGridY =
@@ -765,7 +765,7 @@ void HostLayerNormGradient(
 
     if (gamma != NULL && beta != NULL) {
       // compute grad_gamma(j) and grad_beta(j)
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
       const int part_size = warp_size;
 #else
       const int part_size = 16;
@@ -806,7 +806,7 @@ void HostLayerNormGradient(
       at::cuda::getCurrentDeviceProperties()->maxGridSize[1];
     const dim3 blocks1(1, std::min((uint64_t)n1, maxGridY), 1);
     dim3 threads1(warp_size,4,1);
-#ifndef __HIP_PLATFORM_HCC__
+#ifndef __HIP_PLATFORM_AMD__
     threads1.y = 2;
 #endif
     int nshared =
