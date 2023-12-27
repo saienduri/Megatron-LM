@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#for GLOBAL_BATCH_SIZE in 512 1024 2048
+for GLOBAL_BATCH_SIZE in 2048
+do
+	for MICRO_BATCH_SIZE in 1 2 4 8
+	do
+		for TP_SIZE in 1 2 4 8
+		do
+			PP_SIZE=1
+			echo "megatron hyperparamers: GLOBAL_BATCH_SIZE MICRO_BATCH_SIZE TP_SIZE" $GLOBAL_BATCH_SIZE $MICRO_BATCH_SIZE $TP_SIZE
+			GLOBAL_BATCH_SIZE=$GLOBAL_BATCH_SIZE MICRO_BATCH_SIZE=$MICRO_BATCH_SIZE TP_SIZE=$TP_SIZE PP_SIZE=$PP_SIZE examples_deepspeed/pretrain_gpt_with_mp.sh
+		done
+	done
+done

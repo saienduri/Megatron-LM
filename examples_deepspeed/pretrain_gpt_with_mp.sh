@@ -10,13 +10,31 @@ base_dir="${script_dir%/*}"
 SEQ_LEN=1024
 
 ## GPT-3 Large 760M
-MODEL_SIZE="760m"
-NUM_LAYERS=24
-HIDDEN_SIZE=1536
-NUM_ATTN_HEADS=16
-GLOBAL_BATCH_SIZE=256
-LR=2.5e-4
-MIN_LR=2.0e-5
+
+#MODEL_SIZE="760m"
+#NUM_LAYERS=24
+#HIDDEN_SIZE=1536
+#NUM_ATTN_HEADS=16
+#GLOBAL_BATCH_SIZE=256
+#LR=2.5e-4
+#MIN_LR=2.0e-5
+
+MODEL_SIZE="6.7B"
+NUM_LAYERS=32
+HIDDEN_SIZE=4096
+NUM_ATTN_HEADS=32
+#GLOBAL_BATCH_SIZE=1024
+LR=1.2e-4
+MIN_LR=1.2e-5
+
+#MODEL_SIZE="125M"
+#NUM_LAYERS=12
+#HIDDEN_SIZE=768
+#NUM_ATTN_HEADS=16
+#GLOBAL_BATCH_SIZE=256
+#LR=6.0e-4
+#MIN_LR=6.0e-5
+
 ###############################################################################
 ### Parallelism configs
 NUM_NODES=${SLURM_JOB_NUM_NODES:-1}
@@ -25,16 +43,16 @@ GPUS_PER_NODE=8
 
 ## Micro batch size per data parallel group
 ## Make sure that MICRO_BATCH_SIZE <= GLOBAL_BATCH_SIZE*TP_SIZE*PP_SIZE/NUM_GPUS
-MICRO_BATCH_SIZE=8
+#MICRO_BATCH_SIZE=8
 
 ## Tensor model parallelism, 1 is no TP
 ## Currently, MoE models have divergence issue when TP > 1
-TP_SIZE=2
+#TP_SIZE=2
 
 ## Pipeline model parallelism
 ## Currently, we do not support PP for MoE. To disable PP, set PP_SIZE to 1 and
 ## use the "--no-pipeline-parallel" flag.
-PP_SIZE=1
+#PP_SIZE=1
 
 ## ZeRO
 ZERO_STAGE=1
