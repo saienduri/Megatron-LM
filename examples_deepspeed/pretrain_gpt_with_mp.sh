@@ -5,6 +5,21 @@ set -ex
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 base_dir="${script_dir%/*}"
 
+detect_gpu_platform() {
+    if hash rocm-smi 2>/dev/null; then
+        echo "ROCM detected"
+        return 1
+    fi
+
+    if hash nvidia-smi 2>/dev/null; then
+        echo "CUDA detected"
+        return 0
+    fi
+
+    echo "Neither ROCM nor CUDA detected"
+    return 0
+}
+
 ###############################################################################
 ### Main configs
 SEQ_LEN=1024
@@ -71,8 +86,8 @@ EXIT_DURATION=30
 ### Data and output configs
 VOCAB_FILE="${VOCAB_FILE:-"/megatron/Megatron-DeepSpeed/dataset/gpt2-vocab.json"}"
 MERGE_FILE="${MERGE_FILE:-"/megatron/Megatron-DeepSpeed/dataset/gpt2-merges.txt"}"
-#DATA_PATH="${DATA_PATH:-"/megatron/Megatron-DeepSpeed/dataset/BookCorpusDataset_text_document"}"
-DATA_PATH="${DATA_PATH:-"/megatron/Megatron-DeepSpeed/dataset/my-gpt2_text_document"}"
+DATA_PATH="${DATA_PATH:-"/megatron/Megatron-DeepSpeed/dataset/BookCorpusDataset_text_document"}"
+#DATA_PATH="${DATA_PATH:-"/megatron/Megatron-DeepSpeed/dataset/my-gpt2_text_document"}"
 
 curr_time=$(date "+%Y-%m-%d_%H-%M-%S")
 host="${HOSTNAME}"
@@ -167,8 +182,17 @@ megatron_options=" \
     --seed $SEED \
     --distributed-backend nccl \
     --fp16 \
-    --no-gradient-accumulation-fusion \
-    --use-flash-attn-v1"
+    --use-flash-attn-v2"
+
+
+result=$(detect_gpu_platform)
+if [ "$result" -eq 1 ]; then
+    platform_options=" \
+        --no-gradient-accumulation-fusion
+        "
+else
+    platform_options=""
+fi
 
 if [ "${ACTIVATION_CHECKPOINT}" = "true" ]; then
     megatron_options="$megatron_options \
@@ -207,6 +231,7 @@ run_cmd="torchrun \
     $base_dir/pretrain_gpt.py \
     $data_options \
     $megatron_options \
+    $platform_options \
     $output_options \
     $ds_options 2>&1"
 
