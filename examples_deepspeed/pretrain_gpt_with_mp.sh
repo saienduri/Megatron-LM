@@ -5,19 +5,21 @@ set -ex
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 base_dir="${script_dir%/*}"
 
-detect_gpu_platform() {
+function detect_gpu_platform() {
     if hash rocm-smi 2>/dev/null; then
-        echo "ROCM detected"
-        return 1
+        echo >&2 "ROCM detected"
+        echo 1
+	return
     fi
 
     if hash nvidia-smi 2>/dev/null; then
-        echo "CUDA detected"
-        return 0
+        echo >&2 "CUDA detected"
+        echo 0
+	return
     fi
 
-    echo "Neither ROCM nor CUDA detected"
-    return 0
+    echo >&2 "Neither ROCM nor CUDA detected"
+    echo 1
 }
 
 ###############################################################################
@@ -181,18 +183,23 @@ megatron_options=" \
     --num-workers 0 \
     --seed $SEED \
     --distributed-backend nccl \
-    --fp16 \
-    --use-flash-attn-v2"
-
+    --fp16"
 
 result=$(detect_gpu_platform)
+echo $result
 if [ "$result" -eq 1 ]; then
     platform_options=" \
-        --no-gradient-accumulation-fusion
-        "
+        --use-flash-attn-v1 \
+        --no-gradient-accumulation-fusion"
+    echo "debug gpu: rocm"
 else
-    platform_options=""
+    platform_options=" \
+        --use-flash-attn-v2"
+    echo "debug gpu: cuda"
 fi
+
+test_options=" \
+    --eval-iters 0"
 
 if [ "${ACTIVATION_CHECKPOINT}" = "true" ]; then
     megatron_options="$megatron_options \
@@ -233,6 +240,7 @@ run_cmd="torchrun \
     $megatron_options \
     $platform_options \
     $output_options \
+    $test_options \
     $ds_options 2>&1"
 
 echo "${run_cmd}" | tee "$LOG"
