@@ -18,17 +18,11 @@ mapfile -t _config_env < <(for v in "${_config_env[@]}"; do echo "--env=$v"; don
 # Build Docker image
 # This helps set up the environment by installing DeepSpeed and the other dependencies.
 cd "${base_dir}"
-podman build -f Dockerfile -t megatron/deepspeed:rocm .
 
-# If there exists an obsolete container, remove it.
-if [ "$(podman ps -aq -f name=megatron-deepspeed)" ]; then
-    podman rm megatron-deepspeed
-fi
+docker run ${_config_env[@]} --rm -tid --privileged --network=host --device=/dev/kfd --device=/dev/dri \
+	--group-add video --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+	--ipc=host --shm-size 64G -v ~/:/dockerx -w /root \
+	--name=megatron-deepspeed corescientificai/megatron:megatron_mi300x_mNode_6.2.0-13595
 
-podman run ${_config_env[@]} -tid --privileged --network=host --shm-size=64GB \
-        -v /shareddata:/shareddata \
-        -v ${data_dir}:/dataset \
-        -v ${output_dir}:/output \
-        --name=megatron-deepspeed megatron/deepspeed:rocm
-
-podman exec megatron-deepspeed /megatron-deepspeed/scripts/run_megatron_example.sh
+docker exec megatron-deepspeed /root/Megatron-Deepspeed-PoC/run.sh
+docker stop megatron-deepspeed

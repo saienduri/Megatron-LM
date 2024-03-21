@@ -2,7 +2,7 @@
 
 set -ex
 
-partition_name=${1:-"1CN128C8G2H_2IB_MI210_Ubuntu22"}
+partition_name=${1:-"1CN224C8G1H_MI300X_Ubuntu22"}
 num_nodes=${2:-1}
 
 pattern='^[0-9]+$'
