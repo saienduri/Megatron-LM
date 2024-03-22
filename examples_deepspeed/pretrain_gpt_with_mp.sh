@@ -86,10 +86,10 @@ DECAY_SAMPLES=$((TRAIN_SAMPLES - WARMUP_SAMPLES))
 EXIT_DURATION=30
 ###############################################################################
 ### Data and output configs
-VOCAB_FILE="${VOCAB_FILE:-"/megatron/Megatron-DeepSpeed/dataset/gpt2-vocab.json"}"
-MERGE_FILE="${MERGE_FILE:-"/megatron/Megatron-DeepSpeed/dataset/gpt2-merges.txt"}"
-DATA_PATH="${DATA_PATH:-"/megatron/Megatron-DeepSpeed/dataset/BookCorpusDataset_text_document"}"
-#DATA_PATH="${DATA_PATH:-"/megatron/Megatron-DeepSpeed/dataset/my-gpt2_text_document"}"
+VOCAB_FILE="${VOCAB_FILE:-"/root/Megatron-Deepspeed-PoC/dataset/gpt2-vocab.json"}"
+MERGE_FILE="${MERGE_FILE:-"/root/Megatron-Deepspeed-PoC/dataset/gpt2-merges.txt"}"
+DATA_PATH="${DATA_PATH:-"/root/Megatron-Deepspeed-PoC/dataset/BookCorpusDataset_text_document"}"
+#DATA_PATH="${DATA_PATH:-"/root/Megatron-Deepspeed-PoC/dataset/my-gpt2_text_document"}"
 
 curr_time=$(date "+%Y-%m-%d_%H-%M-%S")
 host="${HOSTNAME}"
@@ -118,7 +118,8 @@ INIT_STD=0.01
 ## Activation checkpointing saves GPU memory, but reduces training speed
 ACTIVATION_CHECKPOINT="false"
 
-SEED=${RANDOM}
+SEED=12345
+#SEED=${RANDOM}
 ###############################################################################
 ### DeepSpeed configs
 ds_config_dir="${base_dir}/ds_config"
