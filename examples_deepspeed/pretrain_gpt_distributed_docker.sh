@@ -19,10 +19,11 @@ mapfile -t _config_env < <(for v in "${_config_env[@]}"; do echo "--env=$v"; don
 # This helps set up the environment by installing DeepSpeed and the other dependencies.
 cd "${base_dir}"
 
+docker pull corescientificai/megatron:megatron_mi300x_mNode_6.2.0-13595
 docker run ${_config_env[@]} --rm -tid --privileged --network=host --device=/dev/kfd --device=/dev/dri \
 	--group-add video --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
 	--ipc=host --shm-size 64G -v ~/:/dockerx -w /root \
 	--name=megatron-deepspeed corescientificai/megatron:megatron_mi300x_mNode_6.2.0-13595
 
-docker exec megatron-deepspeed /root/Megatron-Deepspeed-PoC/run.sh
+docker exec megatron-deepspeed /root/Megatron-Deepspeed-PoC/examples_deepspeed/run.sh
 docker stop megatron-deepspeed
