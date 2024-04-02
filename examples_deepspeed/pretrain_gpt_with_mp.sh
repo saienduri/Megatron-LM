@@ -75,7 +75,7 @@ GPUS_PER_NODE=8
 ZERO_STAGE=1
 ###############################################################################
 ### Training and learning rate configs
-TRAIN_ITERS=50
+TRAIN_ITERS=${TRAIN_ITERATION:-50}
 
 TRAIN_SAMPLES=300000
 WARMUP_SAMPLES=3000
@@ -105,7 +105,7 @@ TENSORBOARD_DIR="${base_output_dir}/tensorboard/${name}_${host}_${curr_time}"
 LOG="${base_output_dir}/log/${name}_${host}_${curr_time}.log"
 ###############################################################################
 ### Misc configs
-LOG_INTERVAL=10
+LOG_INTERVAL=1
 EVAL_ITERS=10
 EVAL_INTERVAL=100
 SAVE_INTERVAL=1000
@@ -190,7 +190,7 @@ result=$(detect_gpu_platform)
 echo $result
 if [ "$result" -eq 1 ]; then
     platform_options=" \
-        --use-flash-attn-v1 \
+        --use-flash-attn-v2 \
         --no-gradient-accumulation-fusion"
     echo "debug gpu: rocm"
 else
@@ -229,7 +229,7 @@ distributed_options=" \
 if [ ${NUM_NODES} -gt 1 ]; then
     distributed_options=" \
         ${distributed_options} \
-        --rdzv_id=12345 \
+        --rdzv_id=${SLURM_JOB_ID} \
         --rdzv_backend=c10d \
         --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT}"
 fi
