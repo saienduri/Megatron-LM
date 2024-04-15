@@ -127,7 +127,7 @@ RUN rm -rf ${STAGE_DIR}/apex
 ##############################################################################
 # Megatron-DeepSpeed
 ##############################################################################
-RUN git clone https://github.com/microsoft/Megatron-DeepSpeed.git ${STAGE_DIR}/Megatron-DeepSpeed
+RUN git clone https://github.com/fsx950223/Megatron-DeepSpeed.git ${STAGE_DIR}/Megatron-DeepSpeed
 
 WORKDIR ${STAGE_DIR}/Megatron-DeepSpeed
 RUN cd ${STAGE_DIR}/Megatron-DeepSpeed && \
