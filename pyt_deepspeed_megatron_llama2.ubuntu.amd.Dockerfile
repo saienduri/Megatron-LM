@@ -1,5 +1,5 @@
 # CONTEXT {'gpu_vendor': 'AMD', 'guest_os': 'UBUNTU'}
-ARG BASE_DOCKER=rocm/pytorch:latest
+ARG BASE_DOCKER=rocm/pytorch:latest@sha256:cfc5bfe46ad5d487ef9a928f50d1f2ff0941b724a6978f6d6350d13ce2c6ca88
 FROM $BASE_DOCKER
 ENV WORKSPACE_DIR=/workspace
 RUN mkdir -p $WORKSPACE_DIR
