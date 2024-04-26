@@ -130,7 +130,7 @@ RUN cd ${STAGE_DIR}/Megatron-DeepSpeed && \
 RUN git clone https://github.com/ROCm/flash-attention.git ${STAGE_DIR}/flash-attention
 
 WORKDIR ${STAGE_DIR}/flash-attention
-RUN GPU_ARCHS=gfx90a,gfx942 python3 setup.py install
+RUN GPU_ARCHS=gfx90a;gfx942 python3 setup.py install
 RUN rm -rf ${STAGE_DIR}/flash-attention
 
 WORKDIR $WORKSPACE_DIR
