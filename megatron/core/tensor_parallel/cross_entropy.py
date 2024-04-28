@@ -54,8 +54,7 @@ class _VocabParallelCrossEntropy(torch.autograd.Function):
                                      group=get_tensor_model_parallel_group())
 
         # Sum of exponential of logits along vocab dimension across all GPUs.
-        exp_logits = vocab_parallel_logits
-        torch.exp(vocab_parallel_logits, out=exp_logits)
+        exp_logits = torch.exp(vocab_parallel_logits)
         sum_exp_logits = exp_logits.sum(dim=-1)
         torch.distributed.all_reduce(sum_exp_logits,
                                      op=torch.distributed.ReduceOp.SUM,

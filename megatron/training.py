@@ -396,6 +396,7 @@ def get_model(model_provider_func, model_type=ModelType.encoder_or_decoder, wrap
                  for model_module in model])), flush=True)
 
     if args.deepspeed:
+        model = [torch.compile(model_module, mode="max-autotune-no-cudagraphs") for model_module in model]
         return model
 
     # GPU allocation.
