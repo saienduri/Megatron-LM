@@ -1,5 +1,5 @@
 # CONTEXT {'gpu_vendor': 'AMD', 'guest_os': 'UBUNTU'}
-ARG BASE_DOCKER=rocm/pytorch:latest@sha256:cfc5bfe46ad5d487ef9a928f50d1f2ff0941b724a6978f6d6350d13ce2c6ca88
+ARG BASE_DOCKER=rocm/pytorch:latest@sha256:95ac9ef9b5ec56543801936b9093aa364b7272edce8e56ee51d09e5397568111
 FROM $BASE_DOCKER
 ENV WORKSPACE_DIR=/workspace
 RUN mkdir -p $WORKSPACE_DIR
@@ -23,14 +23,6 @@ RUN apt-get update && \
         curl wget vim tmux emacs less unzip \
         htop iftop iotop ca-certificates openssh-client openssh-server \
         rsync iputils-ping net-tools sudo
-
-##############################################################################
-# Installation Latest Git
-##############################################################################
-RUN add-apt-repository ppa:git-core/ppa -y && \
-    apt-get update && \
-    apt-get install -y git && \
-    git --version
 
 ##############################################################################
 # Client Liveness & Uncomment Port 22 for SSH Daemon
@@ -58,7 +50,7 @@ RUN apt-get update && \
         cargo \
         libopenmpi-dev \
         python3-dev \
-        curl
+        curl git
 
 # RUN apt update
 # RUN apt install -y -V ca-certificates lsb-release wget
@@ -121,13 +113,12 @@ RUN cd ~ && python3 -c "import deepspeed; print(deepspeed.__version__)"
 RUN git clone https://github.com/ROCm/apex.git ${STAGE_DIR}/apex 
 WORKDIR ${STAGE_DIR}/apex
 RUN python3 setup.py install --cpp_ext --cuda_ext
-WORKDIR $WORKSPACE_DIR
 RUN rm -rf ${STAGE_DIR}/apex
 
 ##############################################################################
 # Megatron-DeepSpeed
 ##############################################################################
-RUN git clone -b llama2_7b https://github.com/ROCm/Megatron-DeepSpeed.git ${STAGE_DIR}/Megatron-DeepSpeed
+RUN git clone -b llama2_7b https://github.com/ROCm/Megatron-LM.git ${STAGE_DIR}/Megatron-DeepSpeed
 
 WORKDIR ${STAGE_DIR}/Megatron-DeepSpeed
 RUN cd ${STAGE_DIR}/Megatron-DeepSpeed && \
@@ -139,7 +130,7 @@ RUN cd ${STAGE_DIR}/Megatron-DeepSpeed && \
 RUN git clone https://github.com/ROCm/flash-attention.git ${STAGE_DIR}/flash-attention
 
 WORKDIR ${STAGE_DIR}/flash-attention
-RUN GPU_ARCHS=gfx90a python3 setup.py install
+RUN GPU_ARCHS="gfx90a;gfx942" python3 setup.py install
 RUN rm -rf ${STAGE_DIR}/flash-attention
 
 WORKDIR $WORKSPACE_DIR
