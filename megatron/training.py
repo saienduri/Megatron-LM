@@ -393,6 +393,13 @@ def get_model(model_provider_func, model_type=ModelType.encoder_or_decoder, wrap
             sum([sum([p.nelement() for p in model_module.parameters()])
                  for model_module in model])), flush=True)
 
+    if args.torch_compile:
+        import torch
+        if args.tensor_model_parallel_size > 1:
+            import torch._dynamo
+            torch._dynamo.config.suppress_errors = True
+        model = [torch.compile(model_module, mode="max-autotune-no-cudagraphs") for model_module in model]
+
     # GPU allocation.
     for model_module in model:
         model_module.cuda(torch.cuda.current_device())

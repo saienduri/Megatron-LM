@@ -969,6 +969,10 @@ def _add_training_args(parser):
                        help='When using manual garbage collection, disable '
                        'garbage collection at the start and the end of each '
                        'evaluation run.', dest='manual_gc_eval')
+    group.add_argument('--no-torch-compile',
+                       action='store_false',
+                       help='Disable using torch.compile to speedup the model.',
+                       dest='torch_compile')
 
     return parser
 
