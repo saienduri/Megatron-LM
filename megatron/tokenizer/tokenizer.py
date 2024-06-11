@@ -10,7 +10,7 @@ from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
 
 from .bert_tokenization import FullTokenizer as FullBertTokenizer
 from .gpt2_tokenization import GPT2Tokenizer
-
+from .qwen_tokenizer import QWenTokenizer
 
 def build_tokenizer(args):
     """Initialize tokenizer."""
@@ -48,6 +48,9 @@ def build_tokenizer(args):
     elif args.tokenizer_type == 'HFTokenizer':
         assert args.tokenizer_model is not None
         tokenizer = _HFTokenizer(args.tokenizer_model, args.seq_length)
+    elif args.tokenizer_type == 'QWenTokenizer':
+        assert args.vocab_file is not None
+        tokenizer = _QWenTokenizer(args.vocab_file)
     else:
         raise NotImplementedError('{} tokenizer is not '
                                   'implemented.'.format(args.tokenizer_type))
@@ -624,3 +627,69 @@ class _HFTokenizer(MegatronTokenizer):
         if candidate is None:
             raise AttributeError("Requested token doesn't exist in current tokenizer")
         return candidate
+
+class _QWenTokenizer(MegatronTokenizer):
+    def __init__(self, vocab_file, errors="replace", extra_vocab_file=None, **kwargs):
+        super().__init__(vocab_file, tokenizer_options=kwargs)
+        self.qwen_tokenizer = QWenTokenizer(vocab_file, errors=errors, extra_vocab_file=extra_vocab_file, **kwargs)
+
+    def tokenize(self, text):
+        """Convert text to embedding ids using QWen tokenizer."""
+        tokens = self.qwen_tokenizer.tokenize(text)
+        ids = [self.qwen_tokenizer._convert_token_to_id(token) for token in tokens]
+        return ids
+
+    def detokenize(self, ids):
+        """Convert embedding ids back to text using QWen tokenizer."""
+        tokens = [self.qwen_tokenizer._convert_id_to_token(id) for id in ids]
+        return self.qwen_tokenizer.convert_tokens_to_string(tokens)
+
+    @property
+    def vocab(self):
+        """Dictionary from vocab text token to id token."""
+        return self.qwen_tokenizer.get_vocab()
+
+    @property
+    def inv_vocab(self):
+        """Dictionary from vocab id token to text token."""
+        return {v: k for k, v in self.qwen_tokenizer.get_vocab().items()}
+
+    @property
+    def vocab_size(self):
+        """The vocabulary size."""
+        return self.qwen_tokenizer.vocab_size
+
+    @property
+    def cls(self):
+        """The CLS token id."""
+        return -1
+    
+    @property
+    def sep(self):
+        """The SEP token id."""
+        return -1
+
+    @property
+    def pad(self):
+        """The PAD token id."""
+        return self.qwen_tokenizer.special_tokens['<PAD>'] if '<PAD>' in self.qwen_tokenizer.special_tokens else None
+
+    @property
+    def eod(self):
+        """The EOD token id."""
+        return self.qwen_tokenizer.eod_id
+
+    @property
+    def bos(self):
+        """The BOS token id."""
+        return self.qwen_tokenizer.im_start_id
+
+    @property
+    def eos(self):
+        """The EOS token id."""
+        return self.qwen_tokenizer.im_end_id
+
+    @property
+    def mask(self):
+        """The MASK token id."""
+        return -1

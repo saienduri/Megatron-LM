@@ -1283,7 +1283,8 @@ def _add_data_args(parser):
                                 'GPTSentencePieceTokenizer',
                                 'Llama2Tokenizer',
                                 'NullTokenizer',
-                                'HFTokenizer'],
+                                'HFTokenizer',
+                                'QWenTokenizer'],
                        help='What type of tokenizer to use.')
     group.add_argument('--tokenizer-model', type=str, default=None,
                        help='Sentencepiece tokenizer model.')
