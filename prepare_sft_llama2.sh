@@ -35,7 +35,6 @@ if tokenizer.unk_token is None:
     special_tokens_dict['unk_token'] = DEFAULT_UNK_TOKEN
 special_tokens_dict.update({'additional_special_tokens': ['<extra_id_0>', '<extra_id_1>', '<extra_id_2>']})
 tokenizer.add_special_tokens(special_tokens_dict)
-num_new_tokens = len(tokenizer) - num_tokens
 
 model = transformers.AutoModelForCausalLM.from_pretrained(
     '$ORIGIN_MODEL_PATH',
@@ -44,14 +43,7 @@ model = transformers.AutoModelForCausalLM.from_pretrained(
 )
 config.vocab_size = len(tokenizer)
 model.resize_token_embeddings(config.vocab_size, pad_to_multiple_of=$TP)
-# input_embeddings = model.get_input_embeddings().weight.data
-# output_embeddings = model.get_output_embeddings().weight.data
 
-# input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-# output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-
-# input_embeddings[-num_new_tokens:] = input_embeddings_avg
-# output_embeddings[-num_new_tokens:] = output_embeddings_avg
 config.save_pretrained('$RESIZED_MODEL_PATH')
 tokenizer.save_pretrained('$RESIZED_MODEL_PATH')
 model.save_pretrained('$RESIZED_MODEL_PATH')" > prepare_sft_llama2.py
