@@ -40,11 +40,16 @@ def build_pretraining_data_loader(dataset, consumed_samples):
                 args.dataloader_type))
 
     # Torch dataloader.
+    if hasattr(dataset, '_collate_fn'):
+        collate_fn = dataset._collate_fn
+    else:
+        collate_fn = None
     return torch.utils.data.DataLoader(dataset,
                                        batch_sampler=batch_sampler,
                                        num_workers=args.num_workers,
                                        pin_memory=True,
                                        persistent_workers=True if args.num_workers > 0 else False,
+                                       collate_fn=collate_fn,
                                        )
 
 class MegatronPretrainingSampler:
