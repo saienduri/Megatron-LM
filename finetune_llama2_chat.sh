@@ -19,7 +19,7 @@ PP="${PP:-1}"
 MBS="${MBS:-4}"
 _BS=`python -c "import torch; print(int($GPUS_PER_NODE*$MBS))"`
 BS="${BS:-$_BS}"
-EPOCHS="${EPOCHS:-3}"
+EPOCHS="${EPOCHS:-4}"
 SEQ_LENGTH="${SEQ_LENGTH:-2048}"
 # total number of samples: 173658
 _TOTAL_ITERS=`python -c "import math; print(int(math.floor(173658/$BS*$EPOCHS)))"`
@@ -87,11 +87,13 @@ GPT_ARGS="
     --bf16
 "
 
-TRAIN_ARGS="--lr 1.0e-5 \
+TRAIN_ARGS="--lr 2.0e-5 \
         --lr-decay-iters 320000 \
         --lr-decay-style cosine \
         --weight-decay 1.0e-1 \
-        --lr-warmup-iters 1000 \
+        --lr-warmup-fraction .001 \
+	--adam-beta1 0.9 \
+	--adam-beta2 0.95 \
         --clip-grad 1.0 \
         "
 
