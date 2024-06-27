@@ -19,10 +19,11 @@ import os
 import re
 import sys
 import types
+from tempfile import TemporaryDirectory
 
 import torch
 
-from transformers import LlamaConfig
+from transformers import LlamaConfig, LlamaForCausalLM
 from transformers.modeling_utils import WEIGHTS_INDEX_NAME, WEIGHTS_NAME, shard_checkpoint
 
 
@@ -359,6 +360,9 @@ def convert_checkpoint_from_megatron_to_transformers(args):
         vocab_size=vocab_size,
         architectures=["LLaMAForCausalLM"],
     )
+    tp = megatron_args.tensor_model_parallel_size
+    ng = (megatron_args.num_query_groups if megatron_args.group_query_attention \
+        else megatron_args.num_attention_heads) // tp
 
     output_state_dict = {}
 
@@ -451,7 +455,11 @@ def convert_checkpoint_from_megatron_to_transformers(args):
                 k = torch.empty(0)
                 v = torch.empty(0)
                 for t in params_per_tp:
-                    qp, kp, vp = t.chunk(3)
+                    t = t.reshape(ng, -1, config.hidden_size)
+                    qp, kp, vp = t.chunk(3, dim=1)
+                    qp = qp.reshape(-1, config.hidden_size)
+                    kp = kp.reshape(-1, config.hidden_size)
+                    vp = vp.reshape(-1, config.hidden_size)
                     q = torch.cat([q, qp])
                     k = torch.cat([k, kp])
                     v = torch.cat([v, vp])
@@ -510,27 +518,18 @@ def convert_checkpoint_from_megatron_to_transformers(args):
     print("Saving config")
     config.save_pretrained(args.save_path)
 
-    # Store the state_dict to file.
+    param_count = 0
+    with TemporaryDirectory() as tmp_model_path:
+        for k, v in output_state_dict.items():
+            param_count += v.numel()
+        # Store the state_dict to file.
+        torch.save(output_state_dict, os.path.join(tmp_model_path, 'pytorch_model.bin'))
+        config.save_pretrained(tmp_model_path)
+        model = LlamaForCausalLM.from_pretrained(tmp_model_path, torch_dtype=dtype)
+
+    print("Saving in the Transformers format.")
     max_shard_size = int(args.max_shard_size) if args.max_shard_size.isdigit() else args.max_shard_size
-    shards, index = shard_checkpoint(output_state_dict, max_shard_size=max_shard_size)
-
-    # Save the model
-    for shard_file, shard in shards.items():
-        torch.save(shard, os.path.join(args.save_path, shard_file))
-
-    if index is None:
-        print(f"Model weights saved in {os.path.join(args.save_path, WEIGHTS_NAME)}")
-    else:
-        save_index_file = os.path.join(args.save_path, WEIGHTS_INDEX_NAME)
-        # Save the index as well
-        with open(save_index_file, "w", encoding="utf-8") as f:
-            content = json.dumps(index, indent=2, sort_keys=True) + "\n"
-            f.write(content)
-        print(
-            f"The model is bigger than the maximum size per checkpoint ({args.max_shard_size}) and is going to be "
-            f"split in {len(shards)} checkpoint shards. You can find where each parameters has been saved in the "
-            f"index located at {save_index_file}."
-        )
+    model.save_pretrained(args.save_path, max_shard_size=max_shard_size)
 
 
 def main():

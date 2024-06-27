@@ -19,10 +19,10 @@ PP="${PP:-1}"
 MBS="${MBS:-4}"
 _BS=`python -c "import torch; print(int($GPUS_PER_NODE*$MBS))"`
 BS="${BS:-$_BS}"
-EPOCHS="${EPOCHS:-1}"
+EPOCHS="${EPOCHS:-3}"
 SEQ_LENGTH="${SEQ_LENGTH:-2048}"
 # total number of samples: 173658
-_TOTAL_ITERS=`python -c "import math; print(int(math.ceil(173658/$BS*$EPOCHS)))"`
+_TOTAL_ITERS=`python -c "import math; print(int(math.floor(173658/$BS*$EPOCHS)))"`
 TOTAL_ITERS="${TOTAL_ITERS:-$_TOTAL_ITERS}"
 
 MAX_POSITION_EMBEDDINGS=4096
@@ -87,7 +87,7 @@ GPT_ARGS="
     --bf16
 "
 
-TRAIN_ARGS="--lr 2.0e-5 \
+TRAIN_ARGS="--lr 1.0e-5 \
         --lr-decay-iters 320000 \
         --lr-decay-style cosine \
         --weight-decay 1.0e-1 \
@@ -100,6 +100,7 @@ COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
                       --tokenizer-type HFTokenizer \
                       --tokenizer-model ${TOKENIZER_MODEL} \
                       --load $PRETRAINED_CHECKPOINT \
+                      --dataloader-type cyclic \
                       --save-interval 1000 \
                       --tensorboard-dir $CHECKPOINT_PATH \
                       --save $CHECKPOINT_PATH \
