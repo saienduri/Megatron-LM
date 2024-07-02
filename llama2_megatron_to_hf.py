@@ -301,16 +301,18 @@ def convert_checkpoint_from_megatron_to_transformers(args):
                 if latest_ckpt in sub_dir:
                     latest_ckpt = sub_dir
                     break
+        possible_state_paths = [os.path.join(args.load_path, latest_ckpt),
+                    os.path.join(args.load_path, latest_ckpt, 'iter_'+str(iteration) if not release else 'release')]
+        state_path = None
+        for p in possible_state_paths:
+            if os.path.exists(p):
+                state_path = p
+                print(f"Loading Megatron-LM checkpoint arguments from: {state_path}")
+                break
     else:
-        raise ValueError('Cannot find latest ckpt!')
-    possible_state_paths = [os.path.join(args.load_path, latest_ckpt),
-                  os.path.join(args.load_path, latest_ckpt, 'iter_'+str(iteration) if not release else 'release')]
-    state_path = None
-    for p in possible_state_paths:
-        if os.path.exists(p):
-            state_path = p
-            print(f"Loading Megatron-LM checkpoint arguments from: {state_path}")
-            break
+        possible_state_paths = [args.load_path]
+        state_path = args.load_path
+
     assert state_path is not None, f"Cannot find state path in {possible_state_paths}"
     possible_sub_dirs = ["mp_rank_00", "mp_rank_00_000", "mp_rank_00_dp_000", "mp_rank_00_000_dp_000"]
     state_dirs = os.listdir(state_path)

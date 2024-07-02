@@ -1,5 +1,6 @@
 import glob
 import json
+import math
 import os
 import time
 import copy
@@ -54,6 +55,7 @@ class ChatDataset(Dataset):
         id1 = self.tokenize(PREFIX_STR + self.special_tokens['turn_start'])
         id2 = self.tokenize(PREFIX_STR)
         self.num_turn_start_tokens = len(id1) - len(id2)
+        self.turn_start_tokens = id1[len(id2) :]
 
         self.dataset_name = dataset_name
         print_rank_0(' > building chat dataset for {}:'.format(
@@ -132,16 +134,16 @@ class ChatDataset(Dataset):
         item = [x + [pad_id] * (max_length - len(x)) for x in item]
         return item
 
-    def _build_loss_mask(self, processed_example):
-        """Pad input_ids in batch to max batch length while building loss mask"""
-        input_ids = processed_example['input_ids']
-        answer_start_idx = processed_example['answer_start_idx']
-        if self.answer_only_loss:
-            loss_mask = [float(idx >= answer_start_idx) for idx in range(len(input_ids))]
-        else:
-            loss_mask = [1.0] * len(input_ids)
+    # def _build_loss_mask(self, processed_example):
+    #     """Pad input_ids in batch to max batch length while building loss mask"""
+    #     input_ids = processed_example['input_ids']
+    #     answer_start_idx = processed_example['answer_start_idx']
+    #     if self.answer_only_loss:
+    #         loss_mask = [float(idx >= answer_start_idx) for idx in range(len(input_ids))]
+    #     else:
+    #         loss_mask = [1.0] * len(input_ids)
 
-        return loss_mask
+    #     return loss_mask
 
     @torch.no_grad()
     def _create_attention_mask(self, max_length):
