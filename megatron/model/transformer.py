@@ -361,18 +361,18 @@ class CoreAttention(MegatronModule):
         key_layer = key_layer.view(output_size[3],
                                    output_size[0] * output_size[1], -1)
 
-        # # preallocting input tensor: [b * np, sq, sk]
-        # matmul_input_buffer = mpu.get_global_memory_buffer().get_tensor(
-        #     (output_size[0]*output_size[1], output_size[2], output_size[3]),
-        #     query_layer.dtype, "mpu")
+        ## preallocting input tensor: [b * np, sq, sk]
+        #matmul_input_buffer = mpu.get_global_memory_buffer().get_tensor(
+        #    (output_size[0]*output_size[1], output_size[2], output_size[3]),
+        #    query_layer.dtype, "mpu")
 
-        # # Raw attention scores. [b * np, sq, sk]
-        # matmul_result = torch.baddbmm(
-        #     matmul_input_buffer,
-        #     query_layer.transpose(0, 1),   # [b * np, sq, hn]
-        #     key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
-        #     beta=0.0, alpha=(1.0/self.norm_factor))
-    
+        ## Raw attention scores. [b * np, sq, sk]
+        #matmul_result = torch.baddbmm(
+        #    matmul_input_buffer,
+        #    query_layer.transpose(0, 1),   # [b * np, sq, hn]
+        #    key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
+        #    beta=0.0, alpha=(1.0/self.norm_factor))
+
         matmul_result = torch.bmm(
                 query_layer.transpose(0, 1),
                 key_layer.transpose(0, 1).transpose(1, 2)) * (1.0/self.norm_factor)
@@ -513,6 +513,7 @@ class ParallelAttention(MegatronModule):
         self.attn_mask_type = attn_mask_type
         self.params_dtype = config.params_dtype
         self.sequence_parallel = config.sequence_parallel
+        self.config = config
 
         self.group_query_attention = args.group_query_attention
         self.num_query_groups = args.num_query_groups
@@ -787,8 +788,8 @@ class ParallelAttention(MegatronModule):
         # apply relative positional encoding (rotary embedding)
         if rotary_pos_emb is not None:
             q_pos_emb, k_pos_emb = rotary_pos_emb
-            query_layer = apply_rotary_pos_emb(query_layer, q_pos_emb)
-            key_layer = apply_rotary_pos_emb(key_layer, k_pos_emb)
+            query_layer = apply_rotary_pos_emb(query_layer, q_pos_emb, self.config)
+            key_layer = apply_rotary_pos_emb(key_layer, k_pos_emb, self.config)
             # TODO, can apply positional embedding to value_layer so it has
             # absolute positional embedding.
             # otherwise, only relative positional embedding takes effect
