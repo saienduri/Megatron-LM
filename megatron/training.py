@@ -522,7 +522,7 @@ def setup_model_and_optimizer(model_provider_func,
 
 
 def train_step(forward_step_func, data_iterator,
-               model, optimizer, opt_param_scheduler, config):
+               model, optimizer, opt_param_scheduler, config=None):
     """Single training step."""
     args = get_args()
     timers = get_timers()
