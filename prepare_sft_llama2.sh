@@ -16,7 +16,7 @@ config = transformers.AutoConfig.from_pretrained(
 tokenizer = transformers.AutoTokenizer.from_pretrained(
     '$ORIGIN_MODEL_PATH',
     padding_side='right',
-    use_fast=True,
+    use_fast=False,
 )
 num_tokens = len(tokenizer)
 

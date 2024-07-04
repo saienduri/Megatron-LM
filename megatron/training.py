@@ -45,7 +45,7 @@ from megatron.initialize import set_jit_fusion_options
 from megatron.optimizer_param_scheduler import OptimizerParamScheduler
 from megatron.utils import check_adlr_autoresume_termination
 from megatron.utils import unwrap_model
-from megatron.data.data_samplers import build_pretraining_data_loader
+from megatron.data.data_samplers import build_pretraining_data_loader, build_data_loader
 from megatron.utils import calc_params_l2_norm
 from megatron.core.pipeline_parallel import get_forward_backward_func
 from megatron.utils import report_memory
@@ -1323,14 +1323,18 @@ def build_train_valid_test_data_loaders(
         train_ds, valid_ds, test_ds = build_train_valid_test_datasets(
             build_train_valid_test_datasets_provider)
         # Build dataloders.
-        train_dataloader = build_pretraining_data_loader(
+        if hasattr(args, "task"):
+            dataloader_build_func = build_data_loader
+        else:
+            dataloader_build_func = build_pretraining_data_loader
+        train_dataloader = dataloader_build_func(
             train_ds, args.consumed_train_samples)
         if args.skip_train:
-            valid_dataloader = build_pretraining_data_loader(valid_ds, 0)
+            valid_dataloader = dataloader_build_func(valid_ds, 0)
         else:
-            valid_dataloader = build_pretraining_data_loader(
+            valid_dataloader = dataloader_build_func(
                 valid_ds, args.consumed_valid_samples)
-        test_dataloader = build_pretraining_data_loader(test_ds, 0)
+        test_dataloader = dataloader_build_func(test_ds, 0)
 
         # Flags to know if we need to do training/validation/testing.
         do_train = train_dataloader is not None and args.train_iters > 0

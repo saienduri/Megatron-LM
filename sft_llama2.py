@@ -31,11 +31,6 @@ def get_tasks_args(parser):
 
     group.add_argument('--task', type=str, required=True,
                        help='Task name.')
-    group.add_argument('--epochs', type=int, default=None,
-                       help='Number of finetunning epochs. Zero results in '
-                       'evaluation only.')
-    group.add_argument('--pretrained-checkpoint', type=str, default=None,
-                       help='Pretrained checkpoint used for finetunning.')
     group.add_argument('--keep-last', action='store_true',
                        help='Keep the last batch (maybe incomplete) in'
                        'the data loader')
@@ -44,47 +39,6 @@ def get_tasks_args(parser):
                        'for training.')
     group.add_argument('--valid-data', nargs='*', default=None,
                        help='path(s) to the validation data.')
-    group.add_argument('--overlapping-eval', type=int, default=32,
-                       help='Sliding window for overlapping evaluation.')
-    group.add_argument('--strict-lambada', action='store_true',
-                       help='Use more difficult formulation of lambada.')
-    # Retriever args
-    group.add_argument('--qa-data-dev', type=str, default=None,
-                       help='Path to the QA dataset dev file.')
-    group.add_argument('--qa-data-test', type=str, default=None,
-                       help='Path to the QA dataset test file.')
-
-    # Faiss arguments for retriever
-    group.add_argument('--faiss-use-gpu', action='store_true',
-                       help='Whether create the FaissMIPSIndex on GPU')
-    group.add_argument('--faiss-match', type=str, default='string', \
-                        choices=['regex', 'string'], help="Answer matching '\
-                        'logic type")
-    group.add_argument('--faiss-topk-retrievals', type=int, default=100,
-                       help='Number of blocks to use as top-k during retrieval')
-
-    # finetune for retriever
-    group.add_argument('--eval-micro-batch-size', type=int, default=None,
-                       help='Eval Batch size per model instance (local batch '
-                            'size). Global batch size is local batch size '
-                            'times data parallel size.')
-    group.add_argument('--train-with-neg', action='store_true',
-                       help='Whether to use negative examples during model '
-                        'training')
-    group.add_argument('--train-hard-neg', type=int, default=0,
-                       help='Number of hard negative exmaples to use during '
-                        'training')
-
-
-    # parameters for Av.rank validation method
-    # Following options/arguments have been taken directly from DPR codebase
-    group.add_argument('--val-av-rank-hard-neg', type=int, default=30,
-                        help='Av.rank validation: how many hard negatives to'
-                        ' take from each question pool')
-    group.add_argument('--val-av-rank-other-neg', type=int, default=30,
-                        help='Av.rank validation: how many other negatives to'
-                        ' take from each question pool')
-
 
     return parser
 
@@ -214,25 +168,6 @@ def forward_step(data_iterator, model: GPTModel):
 
 def is_dataset_built_on_rank():
     return (mpu.is_pipeline_first_stage() or mpu.is_pipeline_last_stage()) and mpu.get_tensor_model_parallel_rank() == 0
-
-
-# def core_gpt_dataset_config_from_args(args):
-#     tokenizer = get_tokenizer()
-
-#     return GPTDatasetConfig(
-#         is_built_on_rank=is_dataset_built_on_rank,
-#         random_seed=args.seed,
-#         sequence_length=args.seq_length,
-#         blend=args.data_path,
-#         blend_per_split=[args.train_data_path, args.valid_data_path, args.test_data_path],
-#         split=args.split,
-#         path_to_cache=args.data_cache_path,
-#         mock=args.mock_data,
-#         tokenizer=tokenizer,
-#         reset_position_ids=args.reset_position_ids,
-#         reset_attention_mask=args.reset_attention_mask,
-#         eod_mask_loss=args.eod_mask_loss,
-#     )
 
 
 def train_valid_test_datasets_provider(train_val_test_num_samples):

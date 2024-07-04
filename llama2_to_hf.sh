@@ -7,3 +7,5 @@ mkdir -p $SFT_HF_MODEL_PATH
 python llama2_megatron_to_hf.py --load_path $SFT_MEGATRON_MODEL_PATH --save_path $SFT_HF_MODEL_PATH --target_params_dtype "fp16" --make_vocab_size_divisible_by 1 --print-checkpoint-structure --megatron-path .
 
 cp -R $HF_MODEL_PATH/token* $SFT_HF_MODEL_PATH
+
+python llama2_tokenizer_to_chat_style.py --hf-path $SFT_HF_MODEL_PATH
