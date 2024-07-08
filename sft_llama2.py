@@ -186,9 +186,6 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 def main():
-    # Temporary for transition to core datasets
-    train_valid_test_datasets_provider.is_distributed = True
-
     pretrain(train_valid_test_datasets_provider,
              model_provider,
              ModelType.encoder_or_decoder,
