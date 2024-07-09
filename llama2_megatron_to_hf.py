@@ -469,6 +469,20 @@ def convert_checkpoint_from_megatron_to_transformers(args):
                 output_state_dict[layer_name + ".self_attn.k_proj.weight"] = k.to(dtype).clone().detach().contiguous()
                 output_state_dict[layer_name + ".self_attn.v_proj.weight"] = v.to(dtype).clone().detach().contiguous()
 
+            elif op_name == "self_attention.query_key_value" and weight_or_bias == "bias" and megatron_args.add_qkv_bias_linear:
+                params_per_tp = params.chunk(dim=0, chunks=megatron_args.tensor_model_parallel_size)
+                q_bias = torch.empty(0)
+                k_bias = torch.empty(0)
+                v_bias = torch.empty(0)
+                for t in params_per_tp:
+                    q_biasp, k_biasp, v_biasp = t.chunk(3, dim=0)
+                    q_bias = torch.cat([q_bias, q_biasp])
+                    k_bias = torch.cat([k_bias, k_biasp])
+                    v_bias = torch.cat([v_bias, v_biasp])
+                output_state_dict[layer_name + ".self_attn.q_proj.bias"] = q_bias.to(dtype).clone().detach().contiguous()
+                output_state_dict[layer_name + ".self_attn.k_proj.bias"] = k_bias.to(dtype).clone().detach().contiguous()
+                output_state_dict[layer_name + ".self_attn.v_proj.bias"] = v_bias.to(dtype).clone().detach().contiguous()
+
             elif op_name == "mlp.dense_h_to_4h" and weight_or_bias == "weight":
                 params_per_tp = params.chunk(dim=0, chunks=megatron_args.tensor_model_parallel_size)
                 gate = torch.empty(0)
@@ -504,7 +518,6 @@ def convert_checkpoint_from_megatron_to_transformers(args):
 
     # For LM head, transformers' wants the matrix to weight embeddings.
     print("Converting LM head")
-    # output_state_dict["lm_head.weight"] = state_dict['model']['language_model']['output_layer']['weight'].to(dtype)
     params = torch.cat([
                         get_element_from_dict_by_path(tp_state_dicts[i], 'model.language_model.output_layer.weight')
                         for i in range(tp_size)]
