@@ -504,7 +504,12 @@ def convert_checkpoint_from_megatron_to_transformers(args):
 
     # For LM head, transformers' wants the matrix to weight embeddings.
     print("Converting LM head")
-    output_state_dict["lm_head.weight"] = state_dict['model']['language_model']['output_layer']['weight'].to(dtype)
+    # output_state_dict["lm_head.weight"] = state_dict['model']['language_model']['output_layer']['weight'].to(dtype)
+    params = torch.cat([
+                        get_element_from_dict_by_path(tp_state_dicts[i], 'model.language_model.output_layer.weight')
+                        for i in range(tp_size)]
+        )
+    output_state_dict["lm_head.weight"] = params.to(dtype).clone()
 
     # It should be done!
     print("Conversion from Megatron-LM to Transformers is done!")
