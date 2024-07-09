@@ -12,6 +12,9 @@ import types
 def add_arguments(parser):
     group = parser.add_argument_group(title='QWen1.5 HF loader.')
 
+    group.add_argument('--target-tensor-parallel-size', type=int, default=None,
+                       help='Target tensor model parallel size, defaults to the tensor parallel size '
+                       'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--true-vocab-size', type=int, default=None,
                        help='original size of vocab, if specified will trim padding from embedding table.')
     group.add_argument('--vocab-file', type=str, default=None,
@@ -99,7 +102,6 @@ def set_attn_state(args, layer, hf_layer):
         hf_attn.v_proj.weight.reshape((ng, dim, -1)),
     ], dim=1).reshape((-1, args.hidden_size)))
     
-    # bias_hidden_size = args.hidden_size // tp * 3
     attn.query_key_value.bias.data.copy_(torch.cat([
         hf_attn.q_proj.bias.reshape(tp, -1), 
         hf_attn.k_proj.bias.reshape(tp, -1), 
@@ -357,6 +359,16 @@ def _load_checkpoint(queue, args):
 
         if md.add_qkv_bias_linear and not md.linear_bias:
             message["qkv bias"] = torch.cat(qkv_bias, dim=0)
+        if args.target_tensor_parallel_size is not None:
+            qkv_bias = message["qkv bias"] 
+            q_bias, k_bias, v_bias = torch.chunk(qkv_bias, dim=0, chunks=3)
+            q_bias = torch.chunk(q_bias, dim=0, chunks=args.target_tensor_parallel_size)
+            k_bias = torch.chunk(k_bias, dim=0, chunks=args.target_tensor_parallel_size)
+            v_bias = torch.chunk(v_bias, dim=0, chunks=args.target_tensor_parallel_size)
+            qkv_bias = torch.empty(0)
+            for tp_rank in range(args.target_tensor_parallel_size):
+                qkv_bias = torch.cat([qkv_bias, q_bias[tp_rank], k_bias[tp_rank], v_bias[tp_rank]])
+            message["qkv bias"] = qkv_bias
         queue_put(f"transformer layer {layer_num}", message)
 
     # Send final norm from tp_rank 0.
