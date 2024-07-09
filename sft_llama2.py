@@ -127,7 +127,12 @@ def loss_func(loss_mask: torch.Tensor, output_tensor: torch.Tensor):
         torch.distributed.all_reduce(loss, group=mpu.get_context_parallel_group())
         loss = loss[0] / loss[1]
     else:
-        loss = torch.sum(losses.view(-1) * loss_mask) / loss_mask.sum()
+        loss_mask_sum = loss_mask.sum()
+        if loss_mask_sum.item() == 0:
+            # loss_mask may sum to 0 espically when micro_batch_size is 1 because of truncation
+            loss = torch.sum(losses.view(-1) * loss_mask)
+        else:
+            loss = torch.sum(losses.view(-1) * loss_mask) / loss_mask_sum
 
     # Check individual rank losses are not NaN prior to DP all-reduce.
     if args.check_for_nan_in_loss_and_grad:
