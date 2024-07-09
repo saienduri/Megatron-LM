@@ -201,10 +201,12 @@ def get_args():
                        choices=['BertWordPieceLowerCase','BertWordPieceCase',
                                 'GPT2BPETokenizer', 'SentencePieceTokenizer',
                                 'GPTSentencePieceTokenizer', 'Llama2Tokenizer',
-                                'NullTokenizer', 'QWenTokenizer'],
+                                'NullTokenizer', 'QWenTokenizer', 'QWen2Tokenizer'],
                        help='What type of tokenizer to use.')
     group.add_argument('--tokenizer-model', type=str, default=None,
                        help='YTTM tokenizer model.')
+    group.add_argument('--extra-vocab-size', type=int, default=None, help='extra vocab size of QWen2Tokenizer')
+    group.add_argument('--seq-length', type=int, default=2048, help='Sequength Length in Tokenizer')
     group.add_argument('--vocab-file', type=str, default=None,
                        help='Path to the vocab file')
     group.add_argument('--vocab-size', default=786,

@@ -51,6 +51,10 @@ def build_tokenizer(args):
     elif args.tokenizer_type == 'QWenTokenizer':
         assert args.vocab_file is not None
         tokenizer = _QWenTokenizer(args.vocab_file)
+    elif args.tokenizer_type == 'QWen2Tokenizer':
+        assert args.tokenizer_model is not None
+        tokenizer = _QWen2Tokenizer(args.tokenizer_model, args.seq_length)
+        args.padded_vocab_size = tokenizer.vocab_size + args.extra_vocab_size
     else:
         raise NotImplementedError('{} tokenizer is not '
                                   'implemented.'.format(args.tokenizer_type))
@@ -693,3 +697,88 @@ class _QWenTokenizer(MegatronTokenizer):
     def mask(self):
         """The MASK token id."""
         return -1
+
+class _QWen2Tokenizer(MegatronTokenizer):
+    """QWen2 Tokenizer"""
+    def __init__(self, tokenizer_name_or_path,max_seq_len):
+        name = tokenizer_name_or_path
+        super().__init__(name)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path,padding_side="right",use_fast=False)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens(special_tokens_dict=dict(pad_token="<unk>"))
+
+        self.tokenizer.model_max_length = max_seq_len
+        self.encoder = self.tokenizer.get_vocab()
+        self.decoder = {v: k for k, v in self.encoder.items()}
+
+    @property
+    def vocab_size(self):
+        return self.tokenizer.vocab_size
+
+    @property
+    def vocab(self):
+        return self.encoder
+
+    @property
+    def inv_vocab(self):
+        return self.decoder
+
+    def tokenize(self, text):
+        return self.tokenizer.encode(text)
+
+    def detokenize(self, token_ids):
+        return self.tokenizer.decode(token_ids)
+
+    @property
+    def bos(self):
+        return self.bos_token_id
+
+    @property
+    def bos_token_id(self):
+        candidate = self.tokenizer.eos_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def cls(self):
+        candidate = self.tokenizer.cls_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def sep(self):
+        candidate = self.tokenizer.sep_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def pad(self):
+        candidate = self.tokenizer.pad_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def eod(self):
+        candidate = self.tokenizer.eos_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def eos(self):
+        return self.eos_token_id
+
+    @property
+    def eos_token_id(self):
+        candidate = self.tokenizer.eos_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def mask(self):
+        candidate = self.tokenizer.mask_token_id
+        return self._check_token_candidate(candidate)
+
+    @property
+    def additional_special_tokens_ids(self):
+        return self.tokenizer.additional_special_tokens_ids
+
+    @staticmethod
+    def _check_token_candidate(candidate):
+        """Checks whether the candidate is None or not, and raises an exception if it is."""
+        if candidate is None:
+            raise AttributeError("Requested token doesn't exist in current tokenizer")
+        return candidate

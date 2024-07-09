@@ -617,6 +617,7 @@ def _add_network_size_args(parser):
     group.add_argument('--use-rotary-position-embeddings', action='store_true',
                        help='Use rotary positional embeddings or not. '
                        'Deprecated: use --position-embedding-type')
+    group.add_argument('--rotary-base', type=int, default=10000, help='--rotary-base')
     group.add_argument('--rotary-percent', type=float, default=1.0,
                        help='Percent of rotary dimension to use, default 100%%')
     group.add_argument('--rotary-seq-len-interpolation-factor', type=int, default=None,
@@ -1284,10 +1285,12 @@ def _add_data_args(parser):
                                 'Llama2Tokenizer',
                                 'NullTokenizer',
                                 'HFTokenizer',
-                                'QWenTokenizer'],
+                                'QWenTokenizer',
+                                'QWen2Tokenizer'],
                        help='What type of tokenizer to use.')
     group.add_argument('--tokenizer-model', type=str, default=None,
                        help='Sentencepiece tokenizer model.')
+    group.add_argument('--extra-vocab-size', type=int, default=0, help='--extra-vocab-size')
     group.add_argument('--reset-position-ids', action='store_true',
                        help='Reset posistion ids after end-of-document token.')
     group.add_argument('--reset-attention-mask', action='store_true',

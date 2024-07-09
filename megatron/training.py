@@ -519,8 +519,7 @@ def setup_model_and_optimizer(model_provider_func,
 
     return model, optimizer, opt_param_scheduler
 
-
-
+ENABLE_PROFILER = False
 def train_step(forward_step_func, data_iterator,
                model, optimizer, opt_param_scheduler, config):
     """Single training step."""
@@ -537,15 +536,35 @@ def train_step(forward_step_func, data_iterator,
 
     # Forward pass.
     forward_backward_func = get_forward_backward_func()
-    losses_reduced = forward_backward_func(
-        forward_step_func=forward_step_func,
-        data_iterator=data_iterator,
-        model=model,
-        num_microbatches=get_num_microbatches(),
-        seq_length=args.seq_length,
-        micro_batch_size=args.micro_batch_size,
-        decoder_seq_length=args.decoder_seq_length,
-        forward_only=False)
+    if ENABLE_PROFILER and torch.distributed.get_rank() == 0 and args.curr_iteration == args.train_iters - 1:
+        print(f"Iter: {args.curr_iteration}")
+        with torch.profiler.profile(
+            activities=[
+                torch.profiler.ProfilerActivity.CPU,
+                torch.profiler.ProfilerActivity.CUDA,
+            ],
+        ) as profile_context:
+            losses_reduced = forward_backward_func(
+                forward_step_func=forward_step_func,
+                data_iterator=data_iterator,
+                model=model,
+                num_microbatches=get_num_microbatches(),
+                seq_length=args.seq_length,
+                micro_batch_size=args.micro_batch_size,
+                decoder_seq_length=args.decoder_seq_length,
+                forward_only=False
+            )
+        profile_context.export_chrome_trace("SMC_trace_w_compile.json")
+    else:
+        losses_reduced = forward_backward_func(
+            forward_step_func=forward_step_func,
+            data_iterator=data_iterator,
+            model=model,
+            num_microbatches=get_num_microbatches(),
+            seq_length=args.seq_length,
+            micro_batch_size=args.micro_batch_size,
+            decoder_seq_length=args.decoder_seq_length,
+            forward_only=False)
 
     # Empty unused memory.
     if args.empty_unused_memory_level >= 1:
