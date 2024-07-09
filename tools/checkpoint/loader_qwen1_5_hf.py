@@ -37,7 +37,7 @@ def load_args_from_checkpoint(args):
 
     # Update Megatron args.
     args.seq_length = 4096
-    args.max_position_embeddings = 4096
+    args.max_position_embeddings = llama_args["max_position_embeddings"]
     args.hidden_size = llama_args["hidden_size"]
     args.num_attention_heads = llama_args["num_attention_heads"]
     args.num_layers = llama_args["num_hidden_layers"]
@@ -46,9 +46,10 @@ def load_args_from_checkpoint(args):
     args.iteration = 1 # '0', 'release' don't work
     args.add_position_embedding = False
     args.use_rotary_position_embeddings = True
+    args.rotary_base = llama_args["rope_theta"]
     args.swiglu = True
     args.tokenizer_type = "HFTokenizer"
-    args.fp16 = True
+    args.bf16 = True
     args.normalization = "RMSNorm"
     args.add_bias_linear = False
     args.add_qkv_bias_linear = True
@@ -57,6 +58,7 @@ def load_args_from_checkpoint(args):
     args.padded_vocab_size = llama_args["vocab_size"]
     args.llama = llama_args
     args.ffn_hidden_size = llama_args["intermediate_size"]
+    args.attention_dropout = llama_args["attention_dropout"]
 
     if "num_key_value_heads" in llama_args:
         args.group_query_attention = True

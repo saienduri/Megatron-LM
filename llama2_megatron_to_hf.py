@@ -23,7 +23,7 @@ from tempfile import TemporaryDirectory
 
 import torch
 
-from transformers import LlamaConfig, LlamaForCausalLM
+from transformers import LlamaConfig, Qwen2Config, LlamaForCausalLM, Qwen2ForCausalLM
 from transformers.modeling_utils import WEIGHTS_INDEX_NAME, WEIGHTS_NAME, shard_checkpoint
 
 
@@ -343,24 +343,46 @@ def convert_checkpoint_from_megatron_to_transformers(args):
     else:
         dtype = torch.float32
 
-    config = LlamaConfig(
-        bos_token_id=1,
-        eos_token_id=2,
+    if megatron_args.add_qkv_bias_linear:
+        config_cls = Qwen2Config
+        architectures = ["Qwen2ForCausalLM"]
+        cls = Qwen2ForCausalLM
+        model_type = "qwen2"
+        bos_token_id=151643
+        eos_token_id=151643
+        rope_theta=1000000.0
+        attention_dropout=0.0
+    else:
+        config_cls = LlamaConfig
+        architectures = ["LLaMAForCausalLM"]
+        cls = LlamaForCausalLM
+        model_type='llama'
+        bos_token_id=1
+        eos_token_id=2
+        rope_theta=10000.0
+        attention_dropout=0.0
+        
+
+    config = config_cls(
+        bos_token_id=bos_token_id,
+        eos_token_id=eos_token_id,
         hidden_act='silu',
         hidden_size=megatron_args.hidden_size,
         intermediate_size=megatron_args.ffn_hidden_size,
         initializer_range=0.02,
         max_sequence_length=megatron_args.seq_length,
-        model_type='llama',
+        model_type=model_type,
         num_attention_heads=megatron_args.num_attention_heads,
         num_hidden_layers=megatron_args.num_layers,
         pad_token_id=0,
         rms_norm_eps=megatron_args.norm_epsilon,
-        torch_dtype='float16',
+        torch_dtype=dtype,
         transformers_version='4.28.0.dev0',
         use_cache=True,
         vocab_size=vocab_size,
-        architectures=["LLaMAForCausalLM"],
+        architectures=architectures,
+        rope_theta=rope_theta,
+        attention_dropout=attention_dropout
     )
     tp = megatron_args.tensor_model_parallel_size
     ng = (megatron_args.num_query_groups if megatron_args.group_query_attention \
@@ -545,7 +567,8 @@ def convert_checkpoint_from_megatron_to_transformers(args):
         # Store the state_dict to file.
         torch.save(output_state_dict, os.path.join(tmp_model_path, 'pytorch_model.bin'))
         config.save_pretrained(tmp_model_path)
-        model = LlamaForCausalLM.from_pretrained(tmp_model_path, torch_dtype=dtype)
+
+        model = cls.from_pretrained(tmp_model_path, torch_dtype=dtype)
 
     print("Saving in the Transformers format.")
     max_shard_size = int(args.max_shard_size) if args.max_shard_size.isdigit() else args.max_shard_size
