@@ -617,7 +617,6 @@ def _add_network_size_args(parser):
     group.add_argument('--use-rotary-position-embeddings', action='store_true',
                        help='Use rotary positional embeddings or not. '
                        'Deprecated: use --position-embedding-type')
-    group.add_argument('--rotary-base', type=int, default=10000, help='--rotary-base')
     group.add_argument('--rotary-percent', type=float, default=1.0,
                        help='Percent of rotary dimension to use, default 100%%')
     group.add_argument('--rotary-seq-len-interpolation-factor', type=int, default=None,
