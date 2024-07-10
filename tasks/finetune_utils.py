@@ -12,14 +12,18 @@ from megatron import get_timers
 from megatron.core import mpu
 from megatron.core.enums import ModelType
 from megatron.checkpointing import load_checkpoint
-from megatron.checkpointing import save_checkpoint
 from megatron.training import evaluate_and_print_results
 from megatron.training import setup_model_and_optimizer
 from megatron.training import train_step
 from megatron.training import training_log
-from megatron.utils import average_losses_across_data_parallel_group
+from megatron.training import num_floating_point_operations
+from megatron.training import save_checkpoint_and_time
 from megatron.utils import calc_params_l2_norm
 from megatron.utils import check_adlr_autoresume_termination
+from megatron.utils import (
+    get_batch_on_this_tp_rank,
+    average_losses_across_data_parallel_group
+)
 
 
 def process_batch(batch):
@@ -104,10 +108,15 @@ def _build_infinite_size_dataloader(dataloader):
 
 def _build_train_valid_dataloaders(train_dataset, valid_dataset, 
     task_collate_fn=None):
+    _task_collate_fn = task_collate_fn
     """Traing and validation dataloaders."""
     args = get_args()
 
     print_rank_0('building train and validation dataloaders ...')
+    if _task_collate_fn is None and hasattr(train_dataset, '_collate_fn'):
+        task_collate_fn = train_dataset._collate_fn
+    else:
+        task_collate_fn = _task_collate_fn
     # Training dataset.
     train_dataloader = build_data_loader(train_dataset, args.micro_batch_size,
                                          args.num_workers, not args.keep_last,
@@ -117,6 +126,10 @@ def _build_train_valid_dataloaders(train_dataset, valid_dataset,
     args.train_iters = args.epochs * args.train_iters_per_epoch
     # Validation dataset. For this dataset, we do not need to set up
     # shuffling so we can just use a simple infinite loop.
+    if _task_collate_fn is None and hasattr(valid_dataset, '_collate_fn'):
+        task_collate_fn = valid_dataset._collate_fn
+    else:
+        task_collate_fn = _task_collate_fn
     valid_dataloader_ = build_data_loader(valid_dataset, args.micro_batch_size,
                                           args.num_workers, not args.keep_last,
                                           task_collate_fn)
@@ -160,6 +173,7 @@ def _train(model, optimizer, opt_param_scheduler, forward_step,
     start_epoch = args.iteration // args.train_iters_per_epoch
     start_iteration = args.iteration % args.train_iters_per_epoch
     iteration = args.iteration
+    num_floating_point_operations_so_far = args.num_floating_point_operations_so_far
 
     # Memory reporting flag.
     report_memory_flag = True
@@ -172,17 +186,23 @@ def _train(model, optimizer, opt_param_scheduler, forward_step,
         # Set the data loader epoch to shuffle the index iterator.
         train_dataloader.sampler.set_epoch(args.seed + epoch)
 
+        train_dataiter = iter(train_dataloader)
         # For all the batches in the dataset.
-        for iteration_, batch in enumerate(train_dataloader):
+        for iteration_ in range(args.train_iters_per_epoch):
 
             # Ignore the iterations before starting value
             if iteration_ < start_iteration:
+                get_batch_on_this_tp_rank(train_dataiter)
                 continue
             # Set to zero so the next epoch does not skip any batches.
             start_iteration = 0
 
             # Train for one step.
-            out = train_step(forward_step, batch, model, optimizer, opt_param_scheduler)
+            out = train_step(forward_step, train_dataiter, model, optimizer, opt_param_scheduler)
+            batch_size = mpu.get_data_parallel_world_size() * \
+                        args.micro_batch_size * \
+                        get_num_microbatches()
+            num_floating_point_operations_so_far += num_floating_point_operations(args, batch_size)
 
             losses_dict, skipped_iter, grad_norm, num_zeros_in_grad = out
             iteration += 1
@@ -208,7 +228,7 @@ def _train(model, optimizer, opt_param_scheduler, forward_step,
             saved_checkpoint = False
             if args.save and args.save_interval and \
                iteration % args.save_interval == 0:
-                save_checkpoint(iteration, model, optimizer, opt_param_scheduler)
+                save_checkpoint_and_time(iteration, model, optimizer, opt_param_scheduler, num_floating_point_operations_so_far)
                 saved_checkpoint = True
 
             # Evaluation
@@ -221,14 +241,14 @@ def _train(model, optimizer, opt_param_scheduler, forward_step,
             # Exiting based on iterations
             if args.exit_interval and iteration % args.exit_interval == 0:
                 if not saved_checkpoint:
-                    save_checkpoint(iteration, model, optimizer, opt_param_scheduler)
+                    save_checkpoint_and_time(iteration, model, optimizer, opt_param_scheduler, num_floating_point_operations_so_far)
                 torch.distributed.barrier()
                 print_rank_0('exiting program at iteration {}'.format(iteration))
                 sys.exit()
 
         # Checkpointing at the end of each epoch.
         if args.save:
-            save_checkpoint(iteration, model, optimizer, opt_param_scheduler)
+            save_checkpoint_and_time(iteration, model, optimizer, opt_param_scheduler, num_floating_point_operations_so_far)
 
         # Callback at the end of each epoch.
         if end_of_epoch_callback is not None:

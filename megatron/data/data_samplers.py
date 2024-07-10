@@ -11,6 +11,33 @@ from megatron import get_args
 from megatron.core import mpu
 
 
+def build_data_loader(dataset, consumed_samples):
+    """Data loader. Note that batch-size is the local (per GPU) batch-size."""
+
+    args = get_args()
+    # Sampler.
+    world_size = mpu.get_data_parallel_world_size()
+    rank = mpu.get_data_parallel_rank()
+    sampler = torch.utils.data.distributed.DistributedSampler(
+        dataset, num_replicas=world_size, rank=rank)
+
+    if hasattr(dataset, '_collate_fn'):
+        collate_fn = dataset._collate_fn
+    else:
+        collate_fn = None
+    # Data loader. Note that batch size is the per GPU batch size.
+    data_loader = torch.utils.data.DataLoader(dataset,
+                                              batch_size=args.micro_batch_size,
+                                              sampler=sampler,
+                                              shuffle=False,
+                                              num_workers=args.num_workers,
+                                              drop_last=not args.keep_last,
+                                              pin_memory=True,
+                                              collate_fn=collate_fn)
+
+    return data_loader
+
+
 def build_pretraining_data_loader(dataset, consumed_samples):
     """Buld dataloader given an input dataset."""
 
@@ -40,11 +67,16 @@ def build_pretraining_data_loader(dataset, consumed_samples):
                 args.dataloader_type))
 
     # Torch dataloader.
+    if hasattr(dataset, '_collate_fn'):
+        collate_fn = dataset._collate_fn
+    else:
+        collate_fn = None
     return torch.utils.data.DataLoader(dataset,
                                        batch_sampler=batch_sampler,
                                        num_workers=args.num_workers,
                                        pin_memory=True,
                                        persistent_workers=True if args.num_workers > 0 else False,
+                                       collate_fn=collate_fn,
                                        )
 
 class MegatronPretrainingSampler:

@@ -130,6 +130,8 @@ def save_checkpoint(queue, args):
         sys.argv.append('--untie-embeddings-and-output-weights')
     if not md.linear_bias:
         sys.argv.append('--disable-bias-linear')
+    if md.add_qkv_bias_linear:
+        sys.argv.append('--add-qkv-bias-linear')
 
     if md.model_type == 'BERT' and not md.bert_binary_head:
         sys.argv.append('--bert-no-binary-head')
@@ -297,6 +299,8 @@ def save_checkpoint(queue, args):
                     mlp_l0_bias = [torch.cat(bias, dim=0) for bias in zip(mlp_l0_bias_W, mlp_l0_bias_V)]
                 else:
                     mlp_l0_bias = torch.chunk(msg.pop("mlp l0 bias"), args.target_tensor_parallel_size, dim=0)
+            if md.add_qkv_bias_linear and not md.linear_bias:
+                qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
 
             # Save them to the model
             for tp_rank in range(args.target_tensor_parallel_size):
@@ -316,6 +320,8 @@ def save_checkpoint(queue, args):
                     l.self_attention.dense.bias.data.copy_(dense_bias)
                     l.mlp.dense_h_to_4h.bias.data.copy_(mlp_l0_bias[tp_rank])
                     l.mlp.dense_4h_to_h.bias.data.copy_(mlp_l1_bias)
+                if md.add_qkv_bias_linear and not md.linear_bias:
+                    l.self_attention.query_key_value.bias.data.copy_(qkv_bias[tp_rank])
 
             total_layer_num = total_layer_num + 1
             check_message(msg)

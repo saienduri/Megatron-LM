@@ -622,6 +622,8 @@ def _add_network_size_args(parser):
                        help='Percent of rotary dimension to use, default 100%%')
     group.add_argument('--rotary-seq-len-interpolation-factor', type=int, default=None,
                        help='Sequence length interpolation factor for rotary embeddings.')
+    group.add_argument('--rotary-base', type=float, default=10000.0,
+                       help='The base period of the RoPE embeddings.')
     group.add_argument('--no-position-embedding',
                        action='store_false',
                        help='Disable position embedding. Deprecated: use --position-embedding-type',

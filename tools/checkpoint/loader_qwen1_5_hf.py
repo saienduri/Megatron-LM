@@ -10,8 +10,11 @@ import types
 
 
 def add_arguments(parser):
-    group = parser.add_argument_group(title='Llama-2 HF loader.')
+    group = parser.add_argument_group(title='QWen1.5 HF loader.')
 
+    group.add_argument('--target-tensor-parallel-size', type=int, default=None,
+                       help='Target tensor model parallel size, defaults to the tensor parallel size '
+                       'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--true-vocab-size', type=int, default=None,
                        help='original size of vocab, if specified will trim padding from embedding table.')
     group.add_argument('--vocab-file', type=str, default=None,
@@ -30,14 +33,14 @@ def verify_transformers_version():
 
 def load_args_from_checkpoint(args):
 
-    # Read Llama args.
+    # Read QWen1.5 args.
     llama_args_path = os.path.join(args.load, "config.json")
     with open(llama_args_path) as f:
         llama_args = json.load(f)
 
     # Update Megatron args.
     args.seq_length = 4096
-    args.max_position_embeddings = 4096
+    args.max_position_embeddings = llama_args["max_position_embeddings"]
     args.hidden_size = llama_args["hidden_size"]
     args.num_attention_heads = llama_args["num_attention_heads"]
     args.num_layers = llama_args["num_hidden_layers"]
@@ -46,16 +49,19 @@ def load_args_from_checkpoint(args):
     args.iteration = 1 # '0', 'release' don't work
     args.add_position_embedding = False
     args.use_rotary_position_embeddings = True
+    args.rotary_base = llama_args["rope_theta"]
     args.swiglu = True
-    args.tokenizer_type = "Llama2Tokenizer"
-    args.fp16 = True
+    args.tokenizer_type = "HFTokenizer"
+    args.bf16 = True
     args.normalization = "RMSNorm"
     args.add_bias_linear = False
+    args.add_qkv_bias_linear = True
     args.untie_embeddings_and_output_weights = True
     args.vocab_size = llama_args["vocab_size"]
     args.padded_vocab_size = llama_args["vocab_size"]
     args.llama = llama_args
     args.ffn_hidden_size = llama_args["intermediate_size"]
+    args.attention_dropout = llama_args["attention_dropout"]
 
     if "num_key_value_heads" in llama_args:
         args.group_query_attention = True
@@ -95,6 +101,13 @@ def set_attn_state(args, layer, hf_layer):
         hf_attn.k_proj.weight.reshape((ng, dim, -1)),
         hf_attn.v_proj.weight.reshape((ng, dim, -1)),
     ], dim=1).reshape((-1, args.hidden_size)))
+    
+    attn.query_key_value.bias.data.copy_(torch.cat([
+        hf_attn.q_proj.bias.reshape(tp, -1), 
+        hf_attn.k_proj.bias.reshape(tp, -1), 
+        hf_attn.v_proj.bias.reshape(tp, -1)
+    ], dim=1).reshape(-1))
+
     attn.dense.weight.data.copy_(hf_attn.o_proj.weight)
 
 
@@ -127,10 +140,10 @@ def load_checkpoint_to_model(args):
     '''Set model params.'''
 
     from pretrain_gpt import model_provider
-    from transformers import LlamaForCausalLM
+    from transformers import AutoModelForCausalLM
 
     # Load Huggingface model.
-    hf_model = LlamaForCausalLM.from_pretrained(args.load, device_map="cpu")
+    hf_model = AutoModelForCausalLM.from_pretrained(args.load, device_map="cpu")
 
     # Init Megatron model.
     model = model_provider(True, True).to(args.params_dtype)
@@ -218,6 +231,7 @@ def _load_checkpoint(queue, args):
     check_for_arg('iteration')
     check_for_arg('bert_binary_head')
     check_for_arg('disable_bias_linear', False)
+    check_for_arg('add_qkv_bias_linear', True)
     check_for_arg('params_dtype')
     check_for_arg('swiglu', False)
 
@@ -256,6 +270,7 @@ def _load_checkpoint(queue, args):
     md.output_layer = margs.untie_embeddings_and_output_weights
     md.position_embedding_type = margs.position_embedding_type
     md.linear_bias = margs.add_bias_linear
+    md.add_qkv_bias_linear = margs.add_qkv_bias_linear
     md.norm_has_bias = False
     md.swiglu = margs.swiglu
     md.previous_tensor_parallel_size = margs.tensor_model_parallel_size
@@ -315,6 +330,8 @@ def _load_checkpoint(queue, args):
         if md.linear_bias:
             qkv_bias.append(layer.self_attention.query_key_value.bias.data)
             mlp_l0_bias.append(layer.mlp.dense_h_to_4h.bias.data)
+        if md.add_qkv_bias_linear and not md.linear_bias:
+            qkv_bias.append(layer.self_attention.query_key_value.bias.data)
 
         # Handle gated linear units.
         if md.swiglu:
@@ -340,6 +357,18 @@ def _load_checkpoint(queue, args):
             else:
                 message["mlp l0 bias"] = torch.cat(mlp_l0_bias, dim=0)
 
+        if md.add_qkv_bias_linear and not md.linear_bias:
+            message["qkv bias"] = torch.cat(qkv_bias, dim=0)
+        if args.target_tensor_parallel_size is not None:
+            qkv_bias = message["qkv bias"] 
+            q_bias, k_bias, v_bias = torch.chunk(qkv_bias, dim=0, chunks=3)
+            q_bias = torch.chunk(q_bias, dim=0, chunks=args.target_tensor_parallel_size)
+            k_bias = torch.chunk(k_bias, dim=0, chunks=args.target_tensor_parallel_size)
+            v_bias = torch.chunk(v_bias, dim=0, chunks=args.target_tensor_parallel_size)
+            qkv_bias = torch.empty(0)
+            for tp_rank in range(args.target_tensor_parallel_size):
+                qkv_bias = torch.cat([qkv_bias, q_bias[tp_rank], k_bias[tp_rank], v_bias[tp_rank]])
+            message["qkv bias"] = qkv_bias
         queue_put(f"transformer layer {layer_num}", message)
 
     # Send final norm from tp_rank 0.
