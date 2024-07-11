@@ -1,5 +1,5 @@
 ORIGIN_MODEL_PATH=/dockerx/Llama-2-7b-hf/
-TP=1
+TP=4
 OUT_DIR=checkpoints/llama2_7b
 mkdir -p $OUT_DIR
 RESIZED_MODEL_PATH=$OUT_DIR/hf

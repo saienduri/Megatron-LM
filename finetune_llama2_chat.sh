@@ -1,9 +1,9 @@
-TRAIN_DATA=/dockerx/wizard_platypus_sharegpt4/train_llama_s2048.jsonl
-VALID_DATA=/dockerx/wizard_platypus_sharegpt4/train_llama_s2048.jsonl
+TRAIN_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl #1001551
+VALID_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl
 
 TOKENIZER_MODEL=checkpoints/llama2_7b/hf
 PRETRAINED_CHECKPOINT=checkpoints/llama2_7b/megatron
-CHECKPOINT_PATH=checkpoints/llama2_7b/megatron_chat
+CHECKPOINT_PATH=checkpoints/llama2_7b/megatron_chat_4k_openhermes_2_5_lr3e-7_bs128
 
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
 # Change for multinode config
@@ -14,15 +14,15 @@ NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 MODEL_SIZE="${MODEL_SIZE:-7}"
-TP="${TP:-1}"
+TP="${TP:-4}"
 PP="${PP:-1}"
 MBS="${MBS:-4}"
 _BS=`python -c "import torch; print(int($GPUS_PER_NODE*$MBS))"`
 BS="${BS:-$_BS}"
-EPOCHS="${EPOCHS:-3}"
-SEQ_LENGTH="${SEQ_LENGTH:-2048}"
-# total number of samples: 173658
-_TOTAL_ITERS=`python -c "import math; print(int(math.floor(173658/$BS*$EPOCHS)))"`
+EPOCHS="${EPOCHS:-1}"
+SEQ_LENGTH="${SEQ_LENGTH:-4096}"
+# total number of samples: 1001551
+_TOTAL_ITERS=`python -c "import math; print(int(math.floor(1001551/$BS*$EPOCHS)))"`
 TOTAL_ITERS="${TOTAL_ITERS:-$_TOTAL_ITERS}"
 
 MAX_POSITION_EMBEDDINGS=4096
@@ -87,16 +87,16 @@ GPT_ARGS="
     --bf16
 "
 
-TRAIN_ARGS="--lr 2.0e-5 \
-        --min-lr 2.0e-5 \
+TRAIN_ARGS="--lr 3e-7 \
+        --min-lr 3e-7 \
         --lr-decay-iters 320000 \
         --lr-decay-style cosine \
         --weight-decay 1.0e-1 \
-        --lr-warmup-fraction .001 \
-	--adam-beta1 0.9 \
-	--adam-beta2 0.95 \
         --clip-grad 1.0 \
         "
+        # --lr-warmup-fraction .001 \
+	# --adam-beta1 0.9 \
+	# --adam-beta2 0.95 \
 
 COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
                       --valid-data $VALID_DATA \
@@ -104,11 +104,11 @@ COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
                       --tokenizer-model ${TOKENIZER_MODEL} \
                       --load $PRETRAINED_CHECKPOINT \
                       --dataloader-type cyclic \
-                      --save-interval 100 \
+                      --save-interval 800 \
                       --tensorboard-dir $CHECKPOINT_PATH \
                       --save $CHECKPOINT_PATH \
-                      --log-interval 100 \
-                      --eval-interval 10000 \
+                      --log-interval 1 \
+                      --eval-interval 320000 \
                       --eval-iters 10"
 
 CKPT_LOAD_ARGS="--exit-on-missing-checkpoint \
@@ -129,6 +129,7 @@ EXTRA_ARGS="
     --num-query-groups $NUM_GROUPS \
     --num-workers 8 \
     --no-gradient-accumulation-fusion \
+    --no-masked-softmax-fusion \
     --use-distributed-optimizer
 "
 

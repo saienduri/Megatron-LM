@@ -7,16 +7,16 @@
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
 
-TP=1
+TP=4
 PP=1
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
 DEVICES_IDS=`python -c "print(' '.join([str(a) for a in range($GPUS_PER_NODE)]))"`
 DP=$(python -c "print(int($GPUS_PER_NODE/$TP/$PP))")
 MODEL_SIZE=7
-SEQ_LENGTH=2048
-# SEQ_LENGTH=4096
+# SEQ_LENGTH=2048
+SEQ_LENGTH=4096
 
-for MBS in 6;
+for MBS in 4;
 do
     rm -f *.csv
 
@@ -25,7 +25,7 @@ do
     ROCBLAS_LOG="${EXPERIMENT_DIR}/rocblas_${MODEL_SIZE}B_mbs${MBS}_tp${TP}_pp${PP}_seq${SEQ_LENGTH}.log"
 
     # =============== search =============== #
-    TOTAL_ITERS=6
+    TOTAL_ITERS=4
     VBS=256
     BS=$(python -c "import math; print(int(math.ceil($VBS/($MBS*$DP))*$MBS*$DP))")
     echo "Getting GEMM info..."
