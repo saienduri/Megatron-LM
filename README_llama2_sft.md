@@ -5,6 +5,10 @@ bash tune_and_train_llama2.sh
 # Prepare the megatron weights
 bash prepare_sft_llama2.sh
 
+# Prepare the dataset
+git clone https://huggingface.co/datasets/teknium/OpenHermes-2.5 /dockerx/OpenHermes-2.5
+python openhermes_2_5_to_jsonl.py
+
 # Run training
 bash sft_llama2.sh
 
