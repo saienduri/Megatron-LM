@@ -104,7 +104,7 @@ COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
                       --tokenizer-model ${TOKENIZER_MODEL} \
                       --load $PRETRAINED_CHECKPOINT \
                       --dataloader-type cyclic \
-                      --save-interval 800 \
+                      --save-interval 200 \
                       --tensorboard-dir $CHECKPOINT_PATH \
                       --save $CHECKPOINT_PATH \
                       --log-interval 1 \
