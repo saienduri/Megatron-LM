@@ -130,8 +130,10 @@ def save_checkpoint(queue, args):
         sys.argv.append('--untie-embeddings-and-output-weights')
     if not md.linear_bias:
         sys.argv.append('--disable-bias-linear')
-    if md.add_qkv_bias_linear:
+    if hasattr(md, 'add_qkv_bias_linear') and md.add_qkv_bias_linear:
         sys.argv.append('--add-qkv-bias-linear')
+    else:
+        md.add_qkv_bias_linear = False
 
     if md.model_type == 'BERT' and not md.bert_binary_head:
         sys.argv.append('--bert-no-binary-head')
