@@ -2,11 +2,12 @@
 
 # set -x
 
-TEE_OUTPUT="${TEE_OUTPUT:-0}"
-NO_TORCH_COMPILE="${NO_TORCH_COMPILE:-0}"
+TEE_OUTPUT="${TEE_OUTPUT:-1}"
+NO_TORCH_COMPILE="${NO_TORCH_COMPILE:-1}"
 
 CWD=`pwd`
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
+# GPUS_PER_NODE=4
 # Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=6006
@@ -59,13 +60,13 @@ else
   echo "Dataset file already exist."
 fi
 
-MODEL_SIZE="${MODEL_SIZE:-7}"
-TP="${TP:-1}"
+MODEL_SIZE="${MODEL_SIZE:-70}"
+TP="${TP:-8}"
 PP="${PP:-1}"
-MBS="${MBS:-4}"
-BS="${BS:-288}"
-SEQ_LENGTH="${SEQ_LENGTH:-2048}"
-TOTAL_ITERS="${TOTAL_ITERS:-6}"
+MBS="${MBS:-1}"
+BS="${BS:-8}"
+SEQ_LENGTH="${SEQ_LENGTH:-4096}"
+TOTAL_ITERS="${TOTAL_ITERS:-4}"
 
 MAX_POSITION_EMBEDDINGS=4096
 
@@ -106,6 +107,7 @@ NUM_GROUPS=$(( ${NUM_HEADS} / ${GROUP_SIZE} ))
 GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
+    --sequence-parallel \
     --num-layers $NUM_LAYERS \
     --hidden-size $HIDDEN_SIZE \
     --ffn-hidden-size $FFN_HIDDEN_SIZE \
@@ -165,6 +167,7 @@ EXTRA_ARGS="
     --group-query-attention \
     --num-query-groups $NUM_GROUPS \
     --no-gradient-accumulation-fusion \
+    --recompute-activations \
     --use-distributed-optimizer
 "
 

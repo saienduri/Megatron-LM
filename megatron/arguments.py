@@ -438,6 +438,7 @@ def _check_arg_is_not_none(args, arg):
 
 def core_transformer_config_from_args(args):
 
+    # print(f"core_transformer_config_from_args={args}")
     # Translate args to core transformer configuration
     kw_args = {}
     for f in dataclasses.fields(TransformerConfig):

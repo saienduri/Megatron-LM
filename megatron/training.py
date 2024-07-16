@@ -16,6 +16,7 @@ import time
 # The earliest we can measure the start time.
 _TRAIN_START_TIME = time.time()
 import torch
+from torch.profiler import profile, record_function, ProfilerActivity
 
 from megatron import get_args
 from megatron import get_signal_handler
@@ -254,6 +255,7 @@ def pretrain(train_valid_test_dataset_provider,
 
         iteration = 0
         if args.do_train and args.train_iters > 0:
+            end_time = 100
             iteration, num_floating_point_operations_so_far = train(
                 forward_step_func,
                 model, optimizer, opt_param_scheduler,
@@ -771,6 +773,8 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
                     writer.add_scalar('throughput', throughput, iteration)
                 if wandb_writer:
                     wandb_writer.log({'throughput': throughput}, iteration)
+        tokensgpu = 1.0 * batch_size * args.seq_length / (elapsed_time_per_iteration * args.world_size)
+        log_string += f' Tokens/s/GPU: {tokensgpu:.1f} |'
         log_string += ' learning rate: {:.3E} |'.format(learning_rate)
         log_string += ' global batch size: {:5d} |'.format(batch_size)
         free_gpu_memory, total_gpu_memory = torch.cuda.mem_get_info()
@@ -799,6 +803,9 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
         total_loss_dict[skipped_iters_key] = 0
         total_loss_dict[nan_iters_key] = 0
         print_rank_last(log_string)
+        num_microbatches = get_num_microbatches()
+        report_theoretical_memory(args, num_microbatches=num_microbatches, verbose=True)
+        report_memory('(after {} iterations)'.format(iteration))
         if report_memory_flag and learning_rate > 0.:
             # Report memory after optimizer state has been initialized.
             if torch.distributed.get_rank() == 0:
@@ -953,11 +960,28 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             })
 
     while iteration < args.train_iters:
+        print(f"Rank{torch.distributed.get_rank()}:# iteration = {iteration} #")
         if args.profile and \
            iteration == args.profile_step_start and \
            torch.distributed.get_rank() in args.profile_ranks:
-            torch.cuda.cudart().cudaProfilerStart()
-            torch.autograd.profiler.emit_nvtx(record_shapes=True).__enter__()
+            # torch.cuda.cudart().cudaProfilerStart()
+            # torch.autograd.profiler.emit_nvtx(record_shapes=True).__enter__()
+
+            print(f"profile start!")
+            profiler = profile(
+            activities=[
+                # ProfilerActivity.CPU, 
+                ProfilerActivity.CUDA
+            ],
+            # schedule=torch.profiler.schedule(wait=0, warmup=0, active=args.profile_step_end - args.profile_step_start),
+            # on_trace_ready=torch.profiler.tensorboard_trace_handler('./log')
+            record_shapes=True,
+            with_flops=True,
+            # with_modules=True,
+            profile_memory=True,
+            # with_stack=True,
+            )
+            profiler.start()
 
         # Update number of microbatches first without consistency check to decide if a
         # checkpoint should be saved. If the number of microbatches is different
@@ -973,19 +997,177 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
         update_num_microbatches(args.consumed_train_samples, consistency_check=True)
 
         args.curr_iteration = iteration
-        loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
-            train_step(forward_step_func,
-                       train_data_iterator,
-                       model,
-                       optimizer,
-                       opt_param_scheduler,
-                       config)
+
+        DEBUG = False
+        manual_profile = True
+        print_mem_usage = True
+        # if DEBUG and manual_profile:
+        # if DEBUG and manual_profile and is_last_rank():
+        #     if timed_profiler is not None:
+        #         timed_profiler.step()
+
+        # if False and DEBUG and manual_profile:
+        if DEBUG and manual_profile and is_last_rank():
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                        record_shapes=True,
+                        with_flops=True,
+                        with_modules=True,
+                        profile_memory=True,
+                        with_stack=True) as prof:
+                loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
+                    train_step(forward_step_func,
+                        train_data_iterator,
+                        model,
+                        optimizer,
+                        opt_param_scheduler,
+                        config)
+            # print(prof.key_averages().table(row_limit=10))
+            fname_prefix = f"train_step_iter{iteration}_rank{torch.distributed.get_rank()}"
+            prof.export_chrome_trace(f"{fname_prefix}-trace.json")
+            # perf_table = prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=100)
+            # print(perf_table)
+            # profiler.export_stacks(os.path.join(profile_dir, 'profile_stacks.txt'), 'self_cuda_time_total')
+
+            # with record_function("test_profile"):
+            #     loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
+            #         train_step(forward_step_func,
+            #             train_data_iterator,
+            #             model,
+            #             optimizer,
+            #             opt_param_scheduler,
+            #             config)
+            # pass
+        else:
+            loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
+                train_step(forward_step_func,
+                        train_data_iterator,
+                        model,
+                        optimizer,
+                        opt_param_scheduler,
+                        config)
+        manual_profile = False
+
+        if DEBUG and print_mem_usage:
+            def measure_memory(model, optimizer):
+                # Measure memory usage of model weights
+                weight_memory = sum(p.numel() * p.element_size() for p in model.parameters())
+                weight_memory_MB = weight_memory / (1024 ** 2)
+
+                # Measure memory usage of optimizer states
+                optimizer_memory = 0
+                for state in optimizer.state.values():
+                    for v in state.values():
+                        optimizer_memory += v.numel() * v.element_size()
+                optimizer_memory_MB = optimizer_memory / (1024 ** 2)
+
+                # Measure activation memory
+                activation_memory = 0
+                # Optionally, measure activation memory
+                activation_memory = sum(
+                    param.grad.numel() * param.grad.element_size()
+                    for param in model.parameters()
+                    if param.grad is not None
+                )
+                activation_memory_MB = activation_memory / (1024 ** 2)
+
+                print(f"Rank{torch.distributed.get_rank()}:Weight Memory: {weight_memory_MB:.2f} MB")
+                print(f"Rank{torch.distributed.get_rank()}:Optimizer Memory: {optimizer_memory_MB:.2f} MB")
+                print(f"Rank{torch.distributed.get_rank()}:Activation Memory: {activation_memory_MB:.2f} MB")
+
+            measure_memory(model[0], optimizer)
+
+        if DEBUG and print_mem_usage:
+            # # Measure optimizer state size
+            # total_size = 0
+            # for group in optimizer.param_groups:
+            #     for p in group['params']:
+            #         state = optimizer.state[p]
+            #         total_size += get_optimizer_state_size(state)
+
+            # # Convert to GB
+            # total_size_gb = total_size / (1024**3)
+            # print(f"Total optimizer state size: {total_size_gb:.2f} GB")
+
+            print(f"Rank{torch.distributed.get_rank()}:model={model}")
+            print(f"Rank{torch.distributed.get_rank()}:optimizer={optimizer}")
+
+            # Function to recursively get size of optimizer state
+            def get_optimizer_state_size(state):
+                if isinstance(state, torch.Tensor):
+                    return state.numel() * state.element_size()
+                elif isinstance(state, dict):
+                    return sum(get_optimizer_state_size(v) for v in state.values())
+                elif isinstance(state, list):
+                    return sum(get_optimizer_state_size(v) for v in state)
+                else:
+                    return 0
+
+            # Measure model weights size
+            total_model_size = 0
+            model0 = model[0]
+            for param in model0.parameters():
+                total_model_size += param.numel() * param.element_size()
+
+            # Measure optimizer state size
+            total_optimizer_size = 0
+            for group in optimizer.param_groups:
+                for p in group['params']:
+                    state = optimizer.state[p]
+                    total_optimizer_size += get_optimizer_state_size(state)
+
+            # Convert to GB
+            total_model_size_gb = total_model_size / (1024**3)
+            total_optimizer_size_gb = total_optimizer_size / (1024**3)
+
+            print(f"Rank{torch.distributed.get_rank()}:Total model weights size: {total_model_size_gb:.2f} GB")
+            print(f"Rank{torch.distributed.get_rank()}:Total optimizer state size: {total_optimizer_size_gb:.2f} GB")
+            print(f"Rank{torch.distributed.get_rank()}:Combined total size: {(total_model_size_gb + total_optimizer_size_gb):.2f} GB")
+
+            # Optionally, print details for each optimizer state
+            # print(f"\nRank{torch.distributed.get_rank()}:Detailed optimizer state sizes:")
+            # for group in optimizer.param_groups:
+            #     for p in group['params']:
+            #         state = optimizer.state[p]
+            #         for k, v in state.items():
+            #             if isinstance(v, torch.Tensor):
+            #                 print(f"State '{k}': {v.numel() * v.element_size() / (1024**3):.4f} GB")
+
+
         iteration += 1
         batch_size = mpu.get_data_parallel_world_size() * \
                      args.micro_batch_size * \
                      get_num_microbatches()
         args.consumed_train_samples += batch_size
         num_floating_point_operations_so_far += num_floating_point_operations(args, batch_size)
+
+        print(f"## iteration = {iteration} ##")
+        if args.profile and \
+           iteration == args.profile_step_end and \
+           torch.distributed.get_rank() in args.profile_ranks:
+        #     torch.cuda.cudart().cudaProfilerStop()
+            # profiler.stop()
+            # profiler.export_stacks('./profile_stacks.txt', 'self_cuda_time_total')
+            # profiler.__exit__(None, None, None)
+            print(f"stop profiling")
+            profile_dir = "./"
+            profiler.stop()
+            perf_table = profiler.key_averages().table(sort_by="self_cuda_time_total", row_limit=16)
+            print(perf_table)
+            profiler.export_stacks(os.path.join(profile_dir, 'profile_stacks.txt'), 'self_cuda_time_total')
+            # Export the trace as JSON
+            profiler.export_chrome_trace(os.path.join(profile_dir, 'profile_trace1.json'))
+
+            # Process the profiler results
+            prof = profiler
+            total_kernel_time = sum([e.cuda_time_total for e in prof.key_averages() if e.key.startswith("cuda")])
+            total_time = sum([e.cpu_time_total + e.cuda_time_total for e in prof.key_averages()])
+
+            # Calculate efficiency or utilization rate
+            efficiency = total_kernel_time / total_time if total_time > 0 else 0
+
+            print(f"Total Kernel Execution Time (CUDA): {total_kernel_time / 1e3:.2f} ms")
+            print(f"Total Execution Time (CPU + CUDA): {total_time / 1e3:.2f} ms")
+            print(f"Efficiency or Utilization Rate: {efficiency * 100:.2f}%")
 
         # Logging.
         loss_scale = optimizer.get_loss_scale().item()
@@ -1083,10 +1265,24 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             exit = True
             break
 
-        if args.profile and \
-           iteration == args.profile_step_end and \
-           torch.distributed.get_rank() in args.profile_ranks:
-            torch.cuda.cudart().cudaProfilerStop()
+        # print(f"## iteration = {iteration} ##")
+        # if args.profile and \
+        #    iteration == args.profile_step_end and \
+        #    torch.distributed.get_rank() in args.profile_ranks:
+        # #     torch.cuda.cudart().cudaProfilerStop()
+        #     # profiler.stop()
+        #     # profiler.export_stacks('./profile_stacks.txt', 'self_cuda_time_total')
+        #     # profiler.__exit__(None, None, None)
+        #     print(f"stop profiling")
+        #     profile_dir = "./"
+        #     profiler.stop()
+        #     perf_table = profiler.key_averages().table(sort_by="self_cuda_time_total", row_limit=16)
+        #     print(perf_table)
+        #     profiler.export_stacks(os.path.join(profile_dir, 'profile_stacks.txt'), 'self_cuda_time_total')
+        #     # Export the trace as JSON
+        #     profiler.export_chrome_trace(os.path.join(profile_dir, 'profile_trace.json'))
+        #     # profiler.__exit__(None, None, None)
+
 
         if args.manual_gc:
             if args.manual_gc_interval != 0 and iteration % args.manual_gc_interval == 0:
