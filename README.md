@@ -19,12 +19,13 @@ pip install "numpy==1.22.4"
 pip install matplotlib==3.8
 pip install numba==0.56
 </pre>
-Install Flash-Attention:
+
+[OPTIONAL] This docker have Flash-Attention installed already. If you want to re-install Flash-Attention:
 <pre>
 git clone https://github.com/ROCm/flash-attention.git
 cd flash-attention
-git config --global --add safe.directory .
-git config --global --add safe.directory ./csrc/flash_attn_rocm/composable_kernel
+[OPTIONAL] git config --global --add safe.directory $PATH_THIS_REPO
+[OPTIONAL] git config --global --add safe.directory $PATH_THIS_REPO/csrc/flash_attn_rocm/composable_kernel
 python3 setup.py install
 </pre>
 
