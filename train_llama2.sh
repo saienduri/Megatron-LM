@@ -12,11 +12,13 @@ NO_TORCH_COMPILE="${NO_TORCH_COMPILE:-0}"
 
 CWD=`pwd`
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
-# # Change for multinode config
-# export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
+
+
+# Change for multinode config
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 CHECKPOINT_PATH=$EXPERIMENT_DIR/ckpts
 rm -rf $CHECKPOINT_PATH
@@ -55,14 +57,14 @@ if __name__ == "__main__":
 
 DATA_PATH=${DATA_DIR}/bookcorpus_text_sentence
 
-if ! [ -f "${DATA_DIR}/bookcorpus_text_sentence.idx" ]; then
-  echo "Dataset file does not exist, creating..."
-  python3 prepare_bookcorpus_megatron_dataset.py --out-dir ${DATA_DIR}
-  python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json  --tokenizer-type GPTSentencePieceTokenizer --tokenizer-model ${EXPERIMENT_DIR}/tokenizer.model --output-prefix ${DATA_DIR}/bookcorpus --workers `nproc` --split-sentences
-  python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json  --tokenizer-type GPTSentencePieceTokenizer --tokenizer-model ${EXPERIMENT_DIR}/tokenizer.model --output-prefix ${DATA_DIR}/bookcorpus --workers `nproc` --split-sentences
-else
-  echo "Dataset file already exist."
-fi
+# if ! [ -f "${DATA_DIR}/bookcorpus_text_sentence.idx" ]; then
+#   echo "Dataset file does not exist, creating..."
+#   python3 prepare_bookcorpus_megatron_dataset.py --out-dir ${DATA_DIR}
+#   python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json  --tokenizer-type GPTSentencePieceTokenizer --tokenizer-model ${EXPERIMENT_DIR}/tokenizer.model --output-prefix ${DATA_DIR}/bookcorpus --workers `nproc` --split-sentences
+#   python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json  --tokenizer-type GPTSentencePieceTokenizer --tokenizer-model ${EXPERIMENT_DIR}/tokenizer.model --output-prefix ${DATA_DIR}/bookcorpus --workers `nproc` --split-sentences
+# else
+#   echo "Dataset file already exist."
+# fi
 
 MODEL_SIZE="${MODEL_SIZE:-70}"
 TP="${TP:-8}"
@@ -146,7 +148,8 @@ DATA_ARGS="
     --data-path $DATA_PATH \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
-    --split 949,50,1
+    --split 949,50,1 \
+    --mock-data
 "
 
 OUTPUT_ARGS="

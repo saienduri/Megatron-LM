@@ -14,11 +14,11 @@ do
 
    KEY_LENGTH=${#KEY}
    VALUE="${ARGUMENT:$KEY_LENGTH+1}"
-
    export "$KEY"="$VALUE"
 done
 
-
+# Change for multinode config
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 TEE_OUTPUT="${TEE_OUTPUT:-0}"
 NO_TORCH_COMPILE="${NO_TORCH_COMPILE:-1}"
@@ -29,6 +29,8 @@ echo "NO_TRAINING=$NO_TRAINING"
 
 CWD=`pwd`
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
+
+
 # Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=23731
@@ -37,9 +39,9 @@ NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 MODEL_SIZE="${MODEL_SIZE:-70}"
-TP="${TP:-4}"
+TP="${TP:-8}"
 PP="${PP:-1}"
-MBS="${MBS:-1}"
+MBS="${MBS:-4}"
 BS="${BS:-128}"
 SEQ_LENGTH="${SEQ_LENGTH:-4096}"
 TOTAL_ITERS="${TOTAL_ITERS:-4}"
@@ -206,8 +208,6 @@ EXTRA_ARGS="
     --group-query-attention \
     --num-query-groups $NUM_GROUPS \
     --no-gradient-accumulation-fusion \
-    --enable_profiling $ENABLE_PROFILING \
-    --profiling_out_folder $PROFILING_DIR \
     --distributed-backend nccl \
     --distributed-timeout-minutes 30
 "

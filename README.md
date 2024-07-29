@@ -56,10 +56,11 @@ For each node, modify the following lines in [train_llama2_throughput.sh](./trai
 <pre>
  7: export GLOO_SOCKET_IFNAME=ens21np0 --> to the network interface on the server [can by obtainted by run ifconfig]
  8: export NCCL_SOCKET_IFNAME=ens21np0 --> to the network interface on the server [can by obtainted by run ifconfig]
-33: MASTER_ADDR=localhost --> to the IP address of the master node (rank=0)
-34: MASTER_PORT=23731 --> use a free port number
-35: NNODES=1 --> to the number of nodes
-36: NODE_RANK=0 --> to the rank for this server; this is NODE-dependent!
+21: export CUDA_DEVICE_MAX_CONNECTIONS=1 --> to the number of nodes
+35: MASTER_ADDR=localhost --> to the IP address of the master node (rank=0)
+36: MASTER_PORT=23731 --> use a free port number
+37: NNODES=1 --> to the number of nodes
+38: NODE_RANK=0 --> to the rank for this server; this is NODE-dependent!
 </pre>
 
 [OPTIONAL] you may modify the following lines in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
