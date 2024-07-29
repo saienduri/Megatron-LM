@@ -7,12 +7,12 @@
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
 
-TP=4
+TP=8
 PP=1
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
 DEVICES_IDS=`python -c "print(' '.join([str(a) for a in range($GPUS_PER_NODE)]))"`
 DP=$(python -c "print(int($GPUS_PER_NODE/$TP/$PP))")
-MODEL_SIZE=7
+MODEL_SIZE=70
 # SEQ_LENGTH=2048
 SEQ_LENGTH=4096
 
@@ -26,7 +26,7 @@ do
 
     # =============== search =============== #
     TOTAL_ITERS=4
-    VBS=256
+    VBS=128
     BS=$(python -c "import math; print(int(math.ceil($VBS/($MBS*$DP))*$MBS*$DP))")
     echo "Getting GEMM info..."
     TEE_OUTPUT=1 TORCH_BLAS_PREFER_HIPBLASLT=0 ROCBLAS_LAYER=4 TOTAL_ITERS=$TOTAL_ITERS MODEL_SIZE=$MODEL_SIZE TP=$TP PP=$PP MBS=$MBS BS=$BS SEQ_LENGTH=$SEQ_LENGTH PYTORCH_TUNABLEOP_ENABLED=0 bash train_llama2.sh 2>&1 | grep "\- { rocblas_function:" | uniq > $ROCBLAS_FILE
@@ -38,7 +38,7 @@ do
     mv full_tuned*.csv $ROCBLAS_DIR
     # =============== search =============== #
 
-    for VBS in 288;
+    for VBS in 128;
     do
         rm -f *.csv
 

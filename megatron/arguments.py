@@ -931,7 +931,7 @@ def _add_training_args(parser):
                        dest='add_bias_linear')
     group.add_argument('--add-qkv-bias-linear', action='store_true',
                        help='use bias in the qkv linear layers')
-    group.add_argument('--optimizer', type=str, default='adam',
+    group.add_argument('--optimizer', type=str, default='sgd',
                        choices=['adam', 'sgd'],
                        help='Optimizer function')
     group.add_argument('--dataloader-type', type=str, default=None,

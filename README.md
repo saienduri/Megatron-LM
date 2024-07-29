@@ -1,3 +1,90 @@
+# How to run
+## Environment Setup
+### On MI300X
+Pull the `rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned` docker image. Docker hub account to get docker: 
+<pre>
+User: rocmshared
+PWD: rocmshared_123
+</pre>
+
+Example:
+<pre>docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged    -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --name llama-70b-training-gl  rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned
+</pre>
+
+
+Install the following dependencies:
+<pre>
+pip install datasets nltk
+pip install "numpy==1.22.4"
+pip install matplotlib==3.8
+pip install numba==0.56
+</pre>
+Install Flash-Attention:
+<pre>
+git clone https://github.com/ROCm/flash-attention.git
+cd flash-attention
+git config --global --add safe.directory .
+git config --global --add safe.directory ./csrc/flash_attn_rocm/composable_kernel
+python3 setup.py install
+</pre>
+
+
+<!-- ### On H100
+Pull the `nvcr.io/nvidia/pytorch:24.07-py3` docker image.
+
+Install the following dependencies:
+<pre>
+pip install ftfy datasets langdetect flash_attn numpy pandas nltk sentencepiece boto3 tqdm regex bs4 newspaper3k htmlmin tldextract transformers
+
+pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
+</pre> -->
+
+## Running the benchmarking 
+### Single node
+Set the parameters in [train_llama2_throughput.sh](./train_llama2_throughput.sh) or in the bash command as follows:
+<pre>
+bash train_llama2_throughput.sh
+</pre>
+### Multiple node
+Download this repo to each of the node
+
+Run exactly the same setup (docker, python-environment) in every node
+
+Set the parameters in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
+
+For each node, modify the following lines in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
+<pre>
+ 7: export GLOO_SOCKET_IFNAME=ens21np0 --> to the network interface on the server [can by obtainted by run ifconfig]
+ 8: export NCCL_SOCKET_IFNAME=ens21np0 --> to the network interface on the server [can by obtainted by run ifconfig]
+33: MASTER_ADDR=localhost --> to the IP address of the master node (rank=0)
+34: MASTER_PORT=23731 --> use a free port number
+35: NNODES=1 --> to the number of nodes
+36: NODE_RANK=0 --> to the rank for this server; this is NODE-dependent!
+</pre>
+
+[OPTIONAL] you may modify the following lines in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
+<pre>
+5: export GPU_MAX_HW_QUEUES=2
+6: export TORCH_NCCL_HIGH_PRIORITY=1
+</pre>
+ > This two lines could hide the communication behind the computation but not very stable yet. 
+
+
+On each node:
+<pre>
+bash train_llama2_throughput.sh
+</pre>
+
+
+## Fine-tuning
+Follow the instruction in [README_llama2_sft.md](./README_llama2_sft.md)
+
+
+Note, for multiple-node fine-tuning, we need to follow very similar process as above [`Multiple node`].
+
+
+
+# Intro to the original repo
 Megatron ([1](https://arxiv.org/pdf/1909.08053.pdf), [2](https://arxiv.org/pdf/2104.04473.pdf), and [3](https://arxiv.org/pdf/2205.05198)) is a large, powerful transformer developed by the Applied Deep Learning Research team at NVIDIA. This repository is for ongoing research related to training large transformer language models at scale. We developed efficient, model-parallel ([tensor](https://arxiv.org/pdf/1909.08053.pdf), [sequence](https://arxiv.org/pdf/2205.05198), and [pipeline](https://arxiv.org/pdf/2104.04473.pdf)), and multi-node pre-training of transformer based models such as [GPT](https://arxiv.org/abs/2005.14165), [BERT](https://arxiv.org/pdf/1810.04805.pdf), and [T5](https://arxiv.org/abs/1910.10683) using mixed precision.
 
 Below are some of the projects where we have directly used Megatron:
