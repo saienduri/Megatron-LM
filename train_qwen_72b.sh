@@ -1,7 +1,7 @@
 #! /bin/bash
 set -ex
 WORKSPACE_DIR="/workspace"
-CUR_DIR=`pwd`
+CUR_DIR=$(pwd)
 
 echo "Cur dir: ${CUR_DIR}"
 
@@ -13,7 +13,7 @@ EXPERIMENT_DIR="/workspace/pretrain/qwen_72B"
 mkdir -p $EXPERIMENT_DIR
 
 if [ ! -e "${EXPERIMENT_DIR}/logs" ]; then
-  mkdir -p ${EXPERIMENT_DIR}/logs
+    mkdir -p ${EXPERIMENT_DIR}/logs
 fi
 
 # Prepare requirements
@@ -21,8 +21,8 @@ pip3 install /workspace/tiktoken-0.6.0-cp39-cp39-manylinux_2_17_x86_64.manylinux
 pip3 install datasets nltk tiktoken
 
 if [ ! -e "/opt/conda/envs/py_3.9/nltk_data/tokenizers" ]; then
-  mkdir -p /opt/conda/envs/py_3.9/nltk_data/tokenizers
-  cp -r /workspace/punkt /opt/conda/envs/py_3.9/nltk_data/tokenizers/
+    mkdir -p /opt/conda/envs/py_3.9/nltk_data/tokenizers
+    cp -r /workspace/punkt /opt/conda/envs/py_3.9/nltk_data/tokenizers/
 fi
 
 # Setup HF env
@@ -31,10 +31,10 @@ HF_PATH='/workspace/transformers'
 echo "DLM_DATAHOME: ${DLM_DATAHOME}"
 
 if [[ -z "${DLM_DATAHOME}" ]]; then
-        export HF_HOME="/workspace/nas_share"
-        echo "No data provider found. Starting from clean cache.".
-else    
-        export HF_HOME=$DLM_DATAHOME
+    export HF_HOME="/workspace/nas_share"
+    echo "No data provider found. Starting from clean cache.".
+else
+    export HF_HOME=$DLM_DATAHOME
 fi
 
 export HF_DATASETS_CACHE=$HF_HOME/datasets
@@ -67,19 +67,18 @@ if __name__ == "__main__":
     out_dir.mkdir(exist_ok=True, parents=True)
 
     dataset = load_dataset("bookcorpus", split="train")
-    dataset.to_json(out_dir / "bookcorpus_megatron.json")' > prepare_bookcorpus_megatron_dataset.py
+    dataset.to_json(out_dir / "bookcorpus_megatron.json")' >prepare_bookcorpus_megatron_dataset.py
 
 if [ ! -e "${DATA_DIR}/bookcorpus_megatron.json" ]; then
-  echo "Prepare data..."
-  python3 prepare_bookcorpus_megatron_dataset.py --out-dir ${DATA_DIR}
+    echo "Prepare data..."
+    python3 prepare_bookcorpus_megatron_dataset.py --out-dir ${DATA_DIR}
 fi
 
 if ! [ -f ${DATA_DIR}/bookcorpus_text_sentence.idx ]; then
-  echo "Dataset file does not exist, creating..."
-  python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json  --tokenizer-type QWenTokenizer --vocab-file ${WORKSPACE_DIR}/qwen.tiktoken --output-prefix ${DATA_DIR}/bookcorpus --workers `nproc` --split-sentences
-  python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json  --tokenizer-type QWenTokenizer --vocab-file ${WORKSPACE_DIR}/qwen.tiktoken --output-prefix ${DATA_DIR}/bookcorpus --workers `nproc` --split-sentences
+    echo "Dataset file does not exist, creating..."
+    python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json --tokenizer-type QWenTokenizer --vocab-file ${WORKSPACE_DIR}/qwen.tiktoken --output-prefix ${DATA_DIR}/bookcorpus --workers $(nproc) --split-sentences
+    python3 tools/preprocess_data.py --input ${DATA_DIR}/bookcorpus_megatron.json --tokenizer-type QWenTokenizer --vocab-file ${WORKSPACE_DIR}/qwen.tiktoken --output-prefix ${DATA_DIR}/bookcorpus --workers $(nproc) --split-sentences
 fi
-
 
 #!/bin/bash
 # This example script is contributed by external user https://github.com/nrailgun
@@ -93,7 +92,6 @@ DATASET_1="${DATA_DIR}/bookcorpus_text_sentence"
 DATASET="1 ${DATASET_1}"
 CHECKPOINT_PATH=${EXPERIMENT_DIR}
 TOKENIZER_PATH=${WORKSPACE_DIR}/qwen.tiktoken
-
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -118,7 +116,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $
 
 OUTPUT_CSV="qwen_72B.csv"
 if [ ! -e "$OUTPUT_CSV" ]; then
-  echo "GPU Number, TP/PP/DP, MSB/GPS/ZS, Sequence Length, Samples/s, Throughput TFLOP/s/GPU, Memory" > ${OUTPUT_CSV}
+    echo "GPU Number, TP/PP/DP, MSB/GPS/ZS, Sequence Length, Samples/s, Throughput TFLOP/s/GPU, Memory" >${OUTPUT_CSV}
 fi
 
 SEQ_LENGTH=2048
@@ -172,6 +170,7 @@ run_cmd="torchrun $DISTRIBUTED_ARGS \
         --hidden-dropout 0 \
         --untie-embeddings-and-output-weights \
         --use-rotary-position-embeddings \
+        --no-position-embedding \
         --disable-bias-linear \
         --add-qkv-bias-linear \
         --normalization RMSNorm \
@@ -184,7 +183,7 @@ eval ${run_cmd}
 
 if grep -q "OutOfMemoryError" $TRAIN_LOG; then
     sleep 2
-    echo "${GPUS_PER_NODE}, ${TP}/${PP}/${DP}, ${MBS}/${GBS}/${ZERO_STAGE}, ${SEQ_LENGTH}, -, -, OOM" >> ${OUTPUT_CSV}
+    echo "${GPUS_PER_NODE}, ${TP}/${PP}/${DP}, ${MBS}/${GBS}/${ZERO_STAGE}, ${SEQ_LENGTH}, -, -, OOM" >>${OUTPUT_CSV}
     continue
 fi
 
@@ -197,6 +196,6 @@ SAMPLES_PER_SECOND=$(awk "BEGIN {printf \"%.2f\", $GBS * 1000  / $TIME_PER_ITERA
 
 THROUGHPUT=$(grep -o 'throughput per GPU (TFLOP/s/GPU): [^|]*' $TRAIN_LOG | tail -n1 | sed 's#throughput per GPU (TFLOP/s/GPU): ##g' | awk '{print $1}')
 
-MEM_USAGE=$(grep -Eo 'mem usages: [^|]*' $TRAIN_LOG | sed -E 's/.*mem usages: ([0-9\.]+).*/\1/'  | head -1)
+MEM_USAGE=$(grep -Eo 'mem usages: [^|]*' $TRAIN_LOG | sed -E 's/.*mem usages: ([0-9\.]+).*/\1/' | head -1)
 
-echo "${GPUS_PER_NODE}, ${TP}/${PP}/${DP}, ${MBS}/${GBS}/${ZERO_STAGE}, ${SEQ_LENGTH}, ${SAMPLES_PER_SECOND}, ${THROUGHPUT}, ${MEM_USAGE}" >> ${OUTPUT_CSV}
+echo "${GPUS_PER_NODE}, ${TP}/${PP}/${DP}, ${MBS}/${GBS}/${ZERO_STAGE}, ${SEQ_LENGTH}, ${SAMPLES_PER_SECOND}, ${THROUGHPUT}, ${MEM_USAGE}" >>${OUTPUT_CSV}

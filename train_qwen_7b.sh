@@ -172,6 +172,7 @@ run_cmd="torchrun $DISTRIBUTED_ARGS \
         --hidden-dropout 0 \
         --untie-embeddings-and-output-weights \
         --use-rotary-position-embeddings \
+        --no-position-embedding \
         --disable-bias-linear \
         --add-qkv-bias-linear \
         --normalization RMSNorm \
