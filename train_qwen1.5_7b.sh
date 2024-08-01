@@ -178,6 +178,7 @@ run_cmd="torchrun $DISTRIBUTED_ARGS \
         --hidden-dropout 0 \
         --untie-embeddings-and-output-weights \
         --use-rotary-position-embeddings \
+        --no-position-embedding \
         --position-embedding-type rope \
         --rotary-base 1000000 \
         --disable-bias-linear \
