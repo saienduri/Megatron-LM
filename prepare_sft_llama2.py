@@ -1,20 +1,11 @@
-ORIGIN_MODEL_PATH=../../huggingface/llama2-70b
-TP=8
-OUT_DIR=checkpoints/llama2_70b
-mkdir -p $OUT_DIR
-RESIZED_MODEL_PATH=$OUT_DIR/hf
-MEGATRON_MODEL_PATH=$OUT_DIR/megatron
-mkdir -p $RESIZED_MODEL_PATH
-mkdir -p $MEGATRON_MODEL_PATH
-
-echo "import torch
+import torch
 import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer, LlamaConfig
 config = transformers.AutoConfig.from_pretrained(
-    '$ORIGIN_MODEL_PATH',
+    '../../huggingface/llama2-70b',
 )
 tokenizer = transformers.AutoTokenizer.from_pretrained(
-    '$ORIGIN_MODEL_PATH',
+    '../../huggingface/llama2-70b',
     padding_side='right',
     use_fast=False,
 )
@@ -37,17 +28,13 @@ special_tokens_dict.update({'additional_special_tokens': ['<extra_id_0>', '<extr
 tokenizer.add_special_tokens(special_tokens_dict)
 
 model = transformers.AutoModelForCausalLM.from_pretrained(
-    '$ORIGIN_MODEL_PATH',
+    '../../huggingface/llama2-70b',
     config=config,
     torch_dtype=torch.bfloat16,
 )
 config.vocab_size = len(tokenizer)
-model.resize_token_embeddings(config.vocab_size, pad_to_multiple_of=$TP)
+model.resize_token_embeddings(config.vocab_size, pad_to_multiple_of=8)
 
-config.save_pretrained('$RESIZED_MODEL_PATH')
-tokenizer.save_pretrained('$RESIZED_MODEL_PATH')
-model.save_pretrained('$RESIZED_MODEL_PATH')" > prepare_sft_llama2.py
-
-python3 prepare_sft_llama2.py
-
-python3 tools/checkpoint/util.py --model-type GPT --loader llama2_hf --saver megatron --load-dir $RESIZED_MODEL_PATH --save-dir $MEGATRON_MODEL_PATH --tokenizer-model $RESIZED_MODEL_PATH --target-tensor-parallel-size $TP
+config.save_pretrained('checkpoints/llama2_70b/hf')
+tokenizer.save_pretrained('checkpoints/llama2_70b/hf')
+model.save_pretrained('checkpoints/llama2_70b/hf')

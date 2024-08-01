@@ -1,26 +1,36 @@
-TRAIN_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl #1001551
-VALID_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl
+export GPU_MAX_HW_QUEUES=2
+export TORCH_NCCL_HIGH_PRIORITY=1
+export NCCL_CHECKS_DISABLE=1
+export NCCL_IB_HCA=bnxt_re0,bnxt_re1,bnxt_re2,bnxt_re3,bnxt_re6,bnxt_re7,bnxt_re8,bnxt_re9
+export NCCL_IB_GID_INDEX=3
+export NCCL_CROSS_NIC=0
+export NCCL_SOCKET_IFNAME=ens51f0np0
+export NCCL_PROTO=Simple
+export GLOO_SOCKET_IFNAME=ens51f0np0
 
-TOKENIZER_MODEL=checkpoints/llama2_7b/hf
-PRETRAINED_CHECKPOINT=checkpoints/llama2_7b/megatron
-CHECKPOINT_PATH=checkpoints/llama2_7b/megatron_chat_4k_openhermes_2_5_lr3e-7_bs128
+TRAIN_DATA=../../huggingface/OpenHermes-2.5/openhermes2_5.jsonl #1001551
+VALID_DATA=../../huggingface/OpenHermes-2.5/openhermes2_5.jsonl
+
+TOKENIZER_MODEL=checkpoints/llama2_70b/hf
+PRETRAINED_CHECKPOINT=checkpoints/llama2_70b/megatron
+CHECKPOINT_PATH=checkpoints/llama2_70b/megatron_chat_4k_openhermes_2_5_lr1e-6_bs128
 
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
 # Change for multinode config
-MASTER_ADDR=localhost
-MASTER_PORT=6006
-NNODES=1
+MASTER_ADDR=10.11.8.151
+MASTER_PORT=37179
+NNODES=2
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-MODEL_SIZE="${MODEL_SIZE:-7}"
-TP="${TP:-4}"
+MODEL_SIZE="${MODEL_SIZE:-70}"
+TP="${TP:-8}"
 PP="${PP:-1}"
-MBS="${MBS:-4}"
+MBS="${MBS:-1}"
 _BS=`python -c "import torch; print(int($GPUS_PER_NODE*$MBS))"`
-BS="${BS:-$_BS}"
+BS="${BS:-128}"
 EPOCHS="${EPOCHS:-1}"
-SEQ_LENGTH="${SEQ_LENGTH:-4096}"
+SEQ_LENGTH="${SEQ_LENGTH:-2048}"
 # total number of samples: 1001551
 _TOTAL_ITERS=`python -c "import math; print(int(math.floor(1001551/$BS*$EPOCHS)))"`
 TOTAL_ITERS="${TOTAL_ITERS:-$_TOTAL_ITERS}"
@@ -87,8 +97,8 @@ GPT_ARGS="
     --bf16
 "
 
-TRAIN_ARGS="--lr 3e-7 \
-        --min-lr 3e-7 \
+TRAIN_ARGS="--lr 1e-5 \
+        --min-lr 1e-6 \
         --lr-decay-iters 320000 \
         --lr-decay-style cosine \
         --weight-decay 1.0e-1 \
@@ -129,8 +139,7 @@ EXTRA_ARGS="
     --num-query-groups $NUM_GROUPS \
     --num-workers 8 \
     --no-gradient-accumulation-fusion \
-    --no-masked-softmax-fusion \
-    --use-distributed-optimizer
+    --use-distributed-optimizer \
 "
 
 torchrun $DISTRIBUTED_ARGS sft_llama2.py \
