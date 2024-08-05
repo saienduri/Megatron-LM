@@ -847,6 +847,14 @@ def _add_training_args(parser):
     group.add_argument('--no-clone-scatter-output-in-embedding', action='store_false',
                        help='If not set, clone the output of the scatter in embedding layer to GC original tensor.',
                        dest='clone_scatter_output_in_embedding')
+
+    # torch profiling
+    group.add_argument('--torch-profiling', action='store_true',
+                    dest='torch_profiling',
+                    help='enable torch profiling')
+    group.add_argument('--trace-dir', type=str, default=None,
+                    dest='trace_dir',
+                    help='enable torch profiling')
     group.add_argument('--profile', action='store_true',
                        help='Enable nsys profiling. When using this option, nsys '
                        'options should be specified in commandline. An example '
