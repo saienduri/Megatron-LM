@@ -374,14 +374,13 @@ def convert_checkpoint_from_megatron_to_transformers(args):
         model_type=model_type,
         num_attention_heads=megatron_args.num_attention_heads,
         num_hidden_layers=megatron_args.num_layers,
-        pad_token_id=0,
+        num_key_value_heads=megatron_args.num_attention_heads // megatron_args.num_query_groups,
         rms_norm_eps=megatron_args.norm_epsilon,
         torch_dtype=dtype,
         transformers_version='4.28.0.dev0',
         use_cache=True,
         vocab_size=vocab_size,
         architectures=architectures,
-        rope_theta=rope_theta,
         attention_dropout=attention_dropout
     )
     tp = megatron_args.tensor_model_parallel_size
@@ -480,7 +479,8 @@ def convert_checkpoint_from_megatron_to_transformers(args):
                 v = torch.empty(0)
                 for t in params_per_tp:
                     t = t.reshape(ng, -1, config.hidden_size)
-                    qp, kp, vp = t.chunk(3, dim=1)
+                    # qp, kp, vp = t.chunk(3, dim=1)
+                    qp, kp, vp = t.split([megatron_args.num_attention_heads // megatron_args.num_query_groups * hidden_size_per_head, hidden_size_per_head, hidden_size_per_head], dim=1)
                     qp = qp.reshape(-1, config.hidden_size)
                     kp = kp.reshape(-1, config.hidden_size)
                     vp = vp.reshape(-1, config.hidden_size)
@@ -497,7 +497,8 @@ def convert_checkpoint_from_megatron_to_transformers(args):
                 k_bias = torch.empty(0)
                 v_bias = torch.empty(0)
                 for t in params_per_tp:
-                    q_biasp, k_biasp, v_biasp = t.chunk(3, dim=0)
+                    # q_biasp, k_biasp, v_biasp = t.chunk(3, dim=0)
+                    qp, kp, vp = t.split([megatron_args.num_attention_heads // megatron_args.num_query_groups * hidden_size_per_head, hidden_size_per_head, hidden_size_per_head], dim=0)
                     q_bias = torch.cat([q_bias, q_biasp])
                     k_bias = torch.cat([k_bias, k_biasp])
                     v_bias = torch.cat([v_bias, v_biasp])

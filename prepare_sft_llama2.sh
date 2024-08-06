@@ -1,4 +1,4 @@
-ORIGIN_MODEL_PATH=../../huggingface/llama2-70b
+ORIGIN_MODEL_PATH=/data/models/Llama-2-70b-hf
 TP=8
 OUT_DIR=checkpoints/llama2_70b
 mkdir -p $OUT_DIR
@@ -48,6 +48,6 @@ config.save_pretrained('$RESIZED_MODEL_PATH')
 tokenizer.save_pretrained('$RESIZED_MODEL_PATH')
 model.save_pretrained('$RESIZED_MODEL_PATH')" > prepare_sft_llama2.py
 
-python3 prepare_sft_llama2.py
+# python3 prepare_sft_llama2.py
 
 python3 tools/checkpoint/util.py --model-type GPT --loader llama2_hf --saver megatron --load-dir $RESIZED_MODEL_PATH --save-dir $MEGATRON_MODEL_PATH --tokenizer-model $RESIZED_MODEL_PATH --target-tensor-parallel-size $TP
