@@ -118,6 +118,7 @@ COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
                       --tensorboard-dir $CHECKPOINT_PATH \
                       --save $CHECKPOINT_PATH \
                       --log-interval 1 \
+                      --log-throughput \
                       --eval-interval 320000 \
                       --eval-iters 10"
 
