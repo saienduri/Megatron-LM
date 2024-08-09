@@ -139,14 +139,18 @@ class Bucket:
         grads as ready when processing the last microbatch and overlap_grad_reduce is True.
         """
         assert param in self.params, 'Param is not in the bucket'
-        assert param not in self.params_with_grad, 'Cannot set grad twice'
+        # assert param not in self.params_with_grad, 'Cannot set grad twice'
+
         assert (
             self.overlap_grad_reduce
         ), 'register_grad_ready() should be called only when overlapping grad reduce'
-        self.params_with_grad.add(param)
-        # If all params in bucket have grads available, issue communication call.
-        if len(self.params_with_grad) == len(self.params):
-            self.start_grad_sync()
+        if param not in self.params_with_grad:
+            self.params_with_grad.add(param)
+            # If all params in bucket have grads available, issue communication call.
+            if len(self.params_with_grad) == len(self.params):
+                # print('========================================================')
+                # print('I have started the start_grad_sync; heyheyhey')
+                self.start_grad_sync()
 
 
 class GradBuffer:

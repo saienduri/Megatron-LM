@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     with open(args.filename) as f:
         lines = f.readlines()
-    lines = lines[1:-1]
+    lines = lines[2:-1]
     lines = [float(a) for a in lines]
     mean = np.mean(np.array(lines))
     print(mean)

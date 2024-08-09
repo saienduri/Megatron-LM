@@ -17,6 +17,9 @@ from megatron.core.datasets.gpt_dataset import MockGPTDataset, GPTDataset
 import megatron.model
 from megatron.core.models.gpt import GPTModel
 from megatron.training import pretrain
+from megatron.training_fsdp import pretrain as pretrain_fsdp
+
+from megatron.training_two_stage import pretrain as pretrain_second
 from megatron.core.transformer.spec_utils import import_module
 from megatron.utils import (
     get_batch_on_this_cp_rank,
@@ -25,6 +28,7 @@ from megatron.utils import (
 )
 from megatron.arguments import core_transformer_config_from_args
 # from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_with_transformer_engine_spec
+from torch.profiler import profile, record_function, ProfilerActivity
 
 
 def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megatron.model.GPTModel]:
@@ -186,6 +190,8 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     else:
         dataset_type = GPTDataset
 
+    dataset_type = MockGPTDataset
+    print(dataset_type)
     print_rank_0("> building train, validation, and test datasets for GPT ...")
 
     train_ds, valid_ds, test_ds = BlendedMegatronDatasetBuilder(
@@ -199,13 +205,21 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     return train_ds, valid_ds, test_ds
 
 
+
 if __name__ == "__main__":
+    from torch.profiler import profile, record_function, ProfilerActivity
+
 
     # Temporary for transition to core datasets
     train_valid_test_datasets_provider.is_distributed = True
-
-    pretrain(train_valid_test_datasets_provider,
-             model_provider,
-             ModelType.encoder_or_decoder,
-             forward_step,
-             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'})
+    model = pretrain_fsdp(train_valid_test_datasets_provider,
+                    model_provider,
+                    ModelType.encoder_or_decoder,
+                    forward_step,
+                    args_defaults={'tokenizer_type': 'GPT2BPETokenizer'})
+    # pretrain_second(model,
+    #                 train_valid_test_datasets_provider,
+    #                 model_provider,
+    #                 ModelType.encoder_or_decoder,
+    #                 forward_step,
+    #                 args_defaults={'tokenizer_type': 'GPT2BPETokenizer'})

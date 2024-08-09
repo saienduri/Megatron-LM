@@ -46,6 +46,7 @@ class DistributedDataParallel(MegatronModule):
         use_distributed_optimizer: bool,
         disable_bucketing: bool = False,
         bucket_size: int = 40000000,
+        torch_compiling: bool = False,
     ):
         super().__init__(config=config)
         self.module = module
@@ -72,6 +73,7 @@ class DistributedDataParallel(MegatronModule):
         self.expert_grads = []
         self.grad_buffer_param_index_map = {}
         self.param_to_grad_buffer = {}
+        self.torch_compiling = torch_compiling
 
         # Group parameters by their gradient type.
         grad_dtype_to_params = {}
@@ -144,7 +146,7 @@ class DistributedDataParallel(MegatronModule):
 
         def param_hook(*unused):
             if param.requires_grad:
-                if self.overlap_grad_reduce:
+                if self.overlap_grad_reduce:# and not self.torch_compiling:
                     assert (
                         param.grad is not None
                     ), 'param.grad being None is not safe when overlap_grad_reduce is True'
@@ -153,7 +155,7 @@ class DistributedDataParallel(MegatronModule):
                 ):
                     param.main_grad.add_(param.grad.data)
                 param.grad = None
-                if self.overlap_grad_reduce:
+                if self.overlap_grad_reduce:#  and not self.torch_compiling:
                     param_to_grad_buffer[param].register_grad_ready(param)
 
         return param_hook

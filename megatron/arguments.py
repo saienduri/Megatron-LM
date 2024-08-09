@@ -42,6 +42,7 @@ def parse_args(extra_args_provider=None, ignore_unknown_args=False):
     parser = _add_transformer_engine_args(parser)
     parser = _add_retro_args(parser)
     parser = _add_experimental_args(parser)
+    parser = _add_profiling_args(parser)
 
     # Custom arguments.
     if extra_args_provider is not None:
@@ -621,8 +622,6 @@ def _add_network_size_args(parser):
                        help='Percent of rotary dimension to use, default 100%%')
     group.add_argument('--rotary-seq-len-interpolation-factor', type=int, default=None,
                        help='Sequence length interpolation factor for rotary embeddings.')
-    group.add_argument('--rotary-base', type=float, default=10000.0,
-                       help='The base period of the RoPE embeddings.')
     group.add_argument('--no-position-embedding',
                        action='store_false',
                        help='Disable position embedding. Deprecated: use --position-embedding-type',
@@ -931,7 +930,7 @@ def _add_training_args(parser):
                        dest='add_bias_linear')
     group.add_argument('--add-qkv-bias-linear', action='store_true',
                        help='use bias in the qkv linear layers')
-    group.add_argument('--optimizer', type=str, default='sgd',
+    group.add_argument('--optimizer', type=str, default='adam',
                        choices=['adam', 'sgd'],
                        help='Optimizer function')
     group.add_argument('--dataloader-type', type=str, default=None,
@@ -1473,3 +1472,19 @@ def _add_experimental_args(parser):
                        '`transformer_block.py`, or `transformer_layer.py`')
 
     return parser
+
+def _add_profiling_args(parser):
+    group = parser.add_argument_group(title='profiling')
+    group.add_argument('--enable_profiling', type=int, default=0,
+                       help='enable the profiling')
+    group.add_argument('--profiling_out_folder', type=str, default=None,
+                       help='enable the profiling')
+    group.add_argument('--profiling_warmup_step', type=str, default=0,
+                       help='enable the profiling')
+    group.add_argument('--profile_memory', type=int, default=0,
+                       help='enable the profiling')
+    return parser
+
+
+
+

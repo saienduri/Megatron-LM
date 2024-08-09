@@ -401,6 +401,11 @@ class _SentencePieceTokenizer(MegatronTokenizer):
     def additional_special_tokens_ids(self):
         return [self.vocab[k] for k in self._t5_tokens]
 
+    def add_special_token(self, t):
+        if t not in self._vocab:
+            next_id = len(self._vocab)
+            self._vocab[t] = next_id
+            self._inv_vocab[next_id] = t
 
 class _GPTSentencePieceTokenizer(_SentencePieceTokenizer):
     """SentencePieceTokenizer-Megatron wrapper"""
@@ -624,3 +629,4 @@ class _HFTokenizer(MegatronTokenizer):
         if candidate is None:
             raise AttributeError("Requested token doesn't exist in current tokenizer")
         return candidate
+

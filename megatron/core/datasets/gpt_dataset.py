@@ -69,7 +69,7 @@ class MockGPTDataset(MockDataset):
         eod = 0
 
         rng = numpy.random.default_rng(seed=[self.split.value, idx])
-        length = rng.integers(low=0, high=self.config.sequence_length)
+        length = rng.integers(low=self.config.sequence_length-2, high=self.config.sequence_length)
         sample_toks = numpy.zeros(length) + tok
         sample_pads = numpy.zeros(self.config.sequence_length - length - 1) + pad
         sample = numpy.int64(numpy.concatenate([[length], sample_toks, [eod], sample_pads]))
