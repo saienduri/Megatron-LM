@@ -13,15 +13,10 @@ from megatron.core.dist_checkpointing.mapping import ShardedStateDict
 from megatron.core.dist_checkpointing.utils import replace_prefix_for_sharding
 from megatron.core.fusions.fused_layer_norm import FusedLayerNorm
 from megatron.core.packed_seq_params import PackedSeqParams
-
-try:
-    from megatron.core.transformer.custom_layers.transformer_engine import (
-        TENorm,
-        get_cpu_offload_context,
-    )
-except ImportError:
-    pass
-    
+from megatron.core.transformer.custom_layers.transformer_engine import (
+    TENorm,
+    get_cpu_offload_context,
+)
 from megatron.core.transformer.enums import AttnMaskType
 from megatron.core.transformer.module import MegatronModule
 from megatron.core.transformer.spec_utils import ModuleSpec, build_module
@@ -98,7 +93,7 @@ class TransformerBlock(MegatronModule):
         self,
         config: TransformerConfig,
         spec: Union[TransformerBlockSubmodules, ModuleSpec],
-        post_layer_norm: bool = False,
+        post_layer_norm: bool = True,
         pre_process: bool = True,
         post_process: bool = True,
     ):
