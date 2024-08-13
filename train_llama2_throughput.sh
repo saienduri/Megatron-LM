@@ -4,8 +4,8 @@
 
 export GPU_MAX_HW_QUEUES=2
 export TORCH_NCCL_HIGH_PRIORITY=1
-export GLOO_SOCKET_IFNAME=ens21np0
-export NCCL_SOCKET_IFNAME=ens21np0
+export GLOO_SOCKET_IFNAME=ens51f0np0
+export NCCL_SOCKET_IFNAME=ens51f0np0
 
 # parsing input arguments
 for ARGUMENT in "$@"

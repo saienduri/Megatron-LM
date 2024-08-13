@@ -1,14 +1,12 @@
 # How to run
 ## Environment Setup
 ### On MI300X
-Pull the `rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned` docker image. Docker hub account to get docker: 
-<pre>
-User: rocmshared
-PWD: rocmshared_123
-</pre>
+Pull the `rocmshared/20240508_2024_0801_exec_dashboard_tuned_csrikris_ll2_train_new_fa2:latest` docker image. 
+If Transformer Engine (TE) is neeeded, you can pull `rocmshared/20240508_2024_0801_exec_dashboard_tuned_csrikris_ll2_train_new_fa2:latest_with_te` docker image
+
 
 Example:
-<pre>docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged    -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --name llama-70b-training-gl  rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned
+<pre>docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged    -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --name llama-70b-training-gl  $DOCKER_IMAGE_NAME
 </pre>
 
 
@@ -40,12 +38,23 @@ pip install ftfy datasets langdetect flash_attn numpy pandas nltk sentencepiece 
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 </pre> -->
 
-## Running the benchmarking 
+## Running the benchmarking
+Before run the training, we need to adapt the network interface.
+- Currently, we are using `ens51f0np0` in our script [train_llama2_throughput.sh](./train_llama2_throughput.sh), [basetrain70b.sh](./basetrain70b.sh), [basetrain70b_tune.sh](./basetrain70b_tune.sh). 
+- [Optional]: for Infini-Band, please configure the `NCCL_IB_HCA` and `NCCL_IB_GID_INDEX` env vars.
+
 ### Single node
 Set the parameters in [train_llama2_throughput.sh](./train_llama2_throughput.sh) or in the bash command as follows:
 <pre>
 bash train_llama2_throughput.sh
 </pre>
+
+### Single node with performance tuning
+Set the parameters in [tune_basetrain.sh](./tune_basetrain.sh) or in the bash command as follows:
+<pre>
+bash tune_basetrain.sh NO_TORCH_COMPILE=0
+</pre>
+
 ### Multiple node
 Download this repo to each of the node
 
