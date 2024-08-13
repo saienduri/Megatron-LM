@@ -131,26 +131,40 @@ class Bucket:
         )
         self.communication_handle.wait()
 
-    def register_grad_ready(self, param: torch.nn.Parameter):
+    def register_grad_ready(self, param: torch.nn.Parameter, bypass_bug: bool = True):
         """
         Registers grads for the passed-in param to be "ready" for grad sync.
 
         When the number of microbatches is greater than 1, we only want to register
         grads as ready when processing the last microbatch and overlap_grad_reduce is True.
         """
-        assert param in self.params, 'Param is not in the bucket'
-        # assert param not in self.params_with_grad, 'Cannot set grad twice'
+        if bypass_bug:
+            assert param in self.params, 'Param is not in the bucket'
+            # assert param not in self.params_with_grad, 'Cannot set grad twice'
+            assert (
+                self.overlap_grad_reduce
+            ), 'register_grad_ready() should be called only when overlapping grad reduce'
+            if param not in self.params_with_grad:
+                self.params_with_grad.add(param)
+                # If all params in bucket have grads available, issue communication call.
+                if len(self.params_with_grad) == len(self.params):
+                    # print('========================================================')
+                    # print('I have started the start_grad_sync; heyheyhey')
+                    self.start_grad_sync()
+        else:
+            assert param in self.params, 'Param is not in the bucket'
+            assert param not in self.params_with_grad, 'Cannot set grad twice'
 
-        assert (
-            self.overlap_grad_reduce
-        ), 'register_grad_ready() should be called only when overlapping grad reduce'
-        if param not in self.params_with_grad:
+            assert (
+                self.overlap_grad_reduce
+            ), 'register_grad_ready() should be called only when overlapping grad reduce'
             self.params_with_grad.add(param)
             # If all params in bucket have grads available, issue communication call.
             if len(self.params_with_grad) == len(self.params):
                 # print('========================================================')
                 # print('I have started the start_grad_sync; heyheyhey')
                 self.start_grad_sync()
+
 
 
 class GradBuffer:

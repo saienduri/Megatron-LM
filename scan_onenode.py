@@ -12,7 +12,7 @@ parser.add_argument('--num_nodes', type=int, default=4,
                     help='number of nodes')
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
-parser.add_argument('--ip_list', type=list, default=['10.11.8.150', '10.11.8.151', '10.11.8.146', '10.11.8.152'],
+parser.add_argument('--ip_list', type=list, default=['10.11.8.150', '10.11.8.151', '10.11.8.143', '10.11.8.152'],
                     help='the IP address for each nodes')
 parser.add_argument('--master_port', type=int, default=23731,
                     help='Port number for Node2Node communication')
@@ -83,15 +83,23 @@ configs_grad_overlap_comm=[
 
 #mbs, gbs, tp, pp
 configs_grad_overlap_comm_four_nodes=[
-    # [4,4,  8,1],
-    [4,64, 8,1],
-    [5,5,  8,1],
-    # [5,80, 8,1],
-    [6,6,  8,1],
-    # [6,96, 8,1],
-    # [4,16, 8,1],
-    # [4,32, 8,1],
-    # [4,8,  8,1],
+    # [2, 2, 8, 1],
+    # [4, 16, 8, 1],
+    # [4, 4, 8, 1],
+    # [5, 5, 8, 1],
+    [4, 16, 8, 1], 
+    [4, 16, 8, 1], 
+    [4, 16, 8, 1], 
+    [4, 16, 8, 1], 
+    # # [4,4,  8,1],
+    # [4,64, 8,1],
+    # [5,5,  8,1],
+    # # [5,80, 8,1],
+    # [6,6,  8,1],
+    # # [6,96, 8,1],
+    # # [4,16, 8,1],
+    # # [4,32, 8,1],
+    # # [4,8,  8,1],
 ]
 
 configs_grad_overlap_comm_gemm=[
@@ -136,6 +144,9 @@ NNODES="${NNODES:-1}"
 NODE_RANK="${NODE_RANK:-0}"
 '''
 def master_node():
+    os.system('rm try_two_nodes_*')
+    os.system('sleep 60')
+
     MASTER_IP = args.ip_list[0]
     for idx, config in enumerate(configs_grad_overlap_comm_four_nodes):
         mbs, gbs, tp, pp = config
@@ -165,6 +176,7 @@ def master_node():
 
 
 def slave_node():
+    os.system('rm try_two_nodes_*')
     for idx, config in enumerate(configs_grad_overlap_comm_four_nodes):
         file_name = 'try_two_nodes_{}_{}_{}.sh'.format(args.num_nodes, idx, args.node_rank)
         while not os.path.isfile(file_name):
@@ -185,6 +197,12 @@ def main():
             os.system('scp *.py amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format( args.ip_list[node_rank]))
             # os.system('scp basetrain70b.sh amd@{}:/home/amd/guihong/megatron-lm-jiang/basetrain70b.sh'.format(args.ip_list[node_rank]))
             # os.system('scp pretrain_gpt.py amd@{}:/home/amd/guihong/megatron-lm-jiang/pretrain_gpt.py'.format(args.ip_list[node_rank]))
+            os.system('rsync -av megatron amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
+            os.system('rsync -av pytorch_afo_testkit amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
+            os.system('rsync -av pytorch_afo_testkit amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
+            os.system('rsync -av tasks amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
+            os.system('rsync -av tests amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
+            os.system('rsync -av tools amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
 
             out_file = 'sync_such_nodes_{}.py'.format(node_rank)
             with open(out_file, 'w+') as file_handler:
@@ -194,7 +212,7 @@ def main():
                         line = 'parser.add_argument(\'--node_rank\', type=int, default={},'.format(node_rank)
                     print(line, file=file_handler)
             os.system('scp {} amd@{}:/home/amd/guihong/megatron-lm-jiang/scan_onenode.py'.format(out_file, args.ip_list[node_rank]))
-            os.system('rsync -av megatron amd@{}:/home/amd/guihong/megatron-lm-jiang/'.format(args.ip_list[node_rank]))
+
         os.system('rm sync_such_nodes_*')
 
     else:
