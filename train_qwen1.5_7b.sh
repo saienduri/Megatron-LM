@@ -99,6 +99,11 @@ GRAD_CLIP=1
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
+FA="${FA:-true}"
+DO="${DO:-true}"
+COMPILE="${COMPILE:-true}"
+AC="${AC:-false}"
+
 if [ $FA = true ]; then
     FA_ARGS="--use-flash-attn "
 elif [ $FA = false ]; then

@@ -99,6 +99,11 @@ GRAD_CLIP=1
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
+FA="${FA:-true}"
+DO="${DO:-true}"
+COMPILE="${COMPILE:-true}"
+AC="${AC:-false}"
+
 if [ $FA = true ]; then
     FA_ARGS="--use-flash-attn "
 elif [ $FA = false ]; then
@@ -130,7 +135,7 @@ TRAIN_STEPS="${TRAIN_STEPS:-5}"
 TP="${TP:-1}"
 PP="${PP:-1}"
 DP="${DP:-8}"
-MBS="${MBS:-8}"
+MBS="${MBS:-4}"
 GBS="${GBS:-256}"
 
 TRAIN_LOG="${EXPERIMENT_DIR}/logs/log_14B_${TP}_${PP}_${DP}_${MBS}_${GBS}_${SEQ_LENGTH}_${COMPILE}_${FA}_${DO}_${AC}.txt"
