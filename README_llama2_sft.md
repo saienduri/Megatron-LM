@@ -11,7 +11,7 @@
     python openhermes_2_5_to_jsonl.py
     ```
 
-3. Run training, modify `data path/weight path/master ip/master port` if necessary
+3. Run training, modify `NICs/data path/weight path/master ip/master port` in `finetune_llama2_chat.sh` if necessary
 
     ```bash
     bash sft_llama2.sh

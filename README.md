@@ -1,11 +1,7 @@
 # How to run
 ## Environment Setup
 ### On MI300X
-Pull the `rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned` docker image. Docker hub account to get docker: 
-<pre>
-User: rocmshared
-PWD: rocmshared_123
-</pre>
+Pull the `rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned` docker image. 
 
 Example:
 <pre>docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged    -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --name llama-70b-training-gl  rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned
@@ -18,6 +14,13 @@ pip install datasets nltk
 pip install "numpy==1.22.4"
 pip install matplotlib==3.8
 pip install numba==0.56
+</pre>
+
+Update RCCL
+<pre>
+git clone --recursive https://github.com/ROCm/rccl -b develop
+cd rccl
+./install.sh -i -l
 </pre>
 
 [OPTIONAL] This docker have Flash-Attention installed already. If you want to re-install Flash-Attention:
