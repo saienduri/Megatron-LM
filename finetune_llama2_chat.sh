@@ -8,12 +8,12 @@ export NCCL_SOCKET_IFNAME=ens51f0np0
 export NCCL_PROTO=Simple
 export GLOO_SOCKET_IFNAME=ens51f0np0
 
-TRAIN_DATA=../../huggingface/OpenHermes-2.5/openhermes2_5.jsonl #1001551
-VALID_DATA=../../huggingface/OpenHermes-2.5/openhermes2_5.jsonl
+TRAIN_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl #1001551
+VALID_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl
 
 TOKENIZER_MODEL=checkpoints/llama2_70b/hf
 PRETRAINED_CHECKPOINT=checkpoints/llama2_70b/megatron
-CHECKPOINT_PATH=checkpoints/llama2_70b/megatron_chat_4k_openhermes_2_5_lr1e-6_bs128
+CHECKPOINT_PATH=checkpoints/llama2_70b/megatron_chat_4k_openhermes_2_5_lr1e-5_bs128
 
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
 # Change for multinode config

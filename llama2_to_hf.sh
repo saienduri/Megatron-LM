@@ -1,4 +1,4 @@
-OUT_DIR=checkpoints/llama2_7b
+OUT_DIR=checkpoints/llama2_70b
 HF_MODEL_PATH=$OUT_DIR/hf
 SFT_MEGATRON_MODEL_PATH="${SFT_MEGATRON_MODEL_PATH:-$OUT_DIR/megatron_chat}"
 SFT_HF_MODEL_PATH=$OUT_DIR/hf_chat
