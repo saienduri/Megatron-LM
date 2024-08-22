@@ -9,7 +9,10 @@ export NCCL_IB_HCA=bnxt_re0,bnxt_re1,bnxt_re2,bnxt_re3,bnxt_re6,bnxt_re7,bnxt_re
 export NCCL_IB_GID_INDEX=3
 export NCCL_CROSS_NIC=0
 export NCCL_SOCKET_IFNAME=ens51f0np0
+export GLOO_SOCKET_IFNAME=ens51f0np0
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NCCL_PROTO=Simple
+export RCCL_MSCCL_ENABLE=0
 
 # parsing input arguments
 for ARGUMENT in "$@"
@@ -22,8 +25,6 @@ do
    export "$KEY"="$VALUE"
 done
 
-export GLOO_SOCKET_IFNAME=ens51f0np0
-export NCCL_SOCKET_IFNAME=ens51f0np0
 TIME_STAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 TEE_OUTPUT="${TEE_OUTPUT:-1}"
@@ -54,8 +55,6 @@ CONTI_PARAMS="${CONTI_PARAMS:-0}"
 OPTIMIZER="${OPTIMIZER:-sgd}"
 TE_FP16="${TE_FP16:-0}"
 
-
-export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR

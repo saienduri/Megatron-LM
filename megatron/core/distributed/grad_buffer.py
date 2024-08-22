@@ -131,14 +131,14 @@ class Bucket:
         )
         self.communication_handle.wait()
 
-    def register_grad_ready(self, param: torch.nn.Parameter, bypass_bug: bool = True):
+    def register_grad_ready(self, param: torch.nn.Parameter, bypass_check: bool = False):
         """
         Registers grads for the passed-in param to be "ready" for grad sync.
 
         When the number of microbatches is greater than 1, we only want to register
         grads as ready when processing the last microbatch and overlap_grad_reduce is True.
         """
-        if bypass_bug:
+        if bypass_check:
             assert param in self.params, 'Param is not in the bucket'
             # assert param not in self.params_with_grad, 'Cannot set grad twice'
             assert (

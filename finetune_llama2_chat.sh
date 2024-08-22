@@ -1,3 +1,19 @@
+#!/bin/bash
+
+# set -x
+
+export GPU_MAX_HW_QUEUES=2
+export TORCH_NCCL_HIGH_PRIORITY=1
+export NCCL_CHECKS_DISABLE=1
+export NCCL_IB_HCA=bnxt_re0,bnxt_re1,bnxt_re2,bnxt_re3,bnxt_re6,bnxt_re7,bnxt_re8,bnxt_re9
+export NCCL_IB_GID_INDEX=3
+export NCCL_CROSS_NIC=0
+export NCCL_SOCKET_IFNAME=ens51f0np0
+export GLOO_SOCKET_IFNAME=ens51f0np0
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export NCCL_PROTO=Simple
+export RCCL_MSCCL_ENABLE=0
+
 TRAIN_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl #1001551
 VALID_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl
 
