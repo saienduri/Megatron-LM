@@ -27,6 +27,7 @@ done
 
 
 TIME_STAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+EXP_NAME="${EXP_NAME:-perf}"
 
 TEE_OUTPUT="${TEE_OUTPUT:-1}"
 NO_TORCH_COMPILE="${NO_TORCH_COMPILE:-1}"
@@ -106,7 +107,7 @@ MAX_POSITION_EMBEDDINGS=32768
 
 DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_bs${BS}_tp${TP}_pp${PP}_optim_${OPTIMIZER}_iter${TOTAL_ITERS}/nocompile${NO_TORCH_COMPILE}_TE_FP16_${TE_FP16}/${TIME_STAMP}"
 LOG_DIR="${LOG_DIR:-${DEFAULT_LOG_DIR}}"
-TRAIN_LOG="${LOG_DIR}/output.log"
+TRAIN_LOG="${LOG_DIR}/output_${EXP_NAME}.log"
 mkdir -p $LOG_DIR
 echo $TRAIN_LOG
 
@@ -142,9 +143,7 @@ fi
 GROUP_SIZE=$(( ${NUM_HEADS} / ${NUM_KV_HEADS} ))
 NUM_GROUPS=$(( ${NUM_HEADS} / ${GROUP_SIZE} ))
 
-
-PROFILING_DIR="${LOG_DIR}/trace_using_tuned_gemm"
-
+PROFILING_DIR="${LOG_DIR}/trace_${EXP_NAME}"
 
 GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
@@ -312,9 +311,9 @@ rm tmp.txt
 
 NUM_GROUPS=$(( ${NNODES} - 1 ))
 if [[ $NODE_RANK -eq $NUM_GROUPS ]]; then
-    '#Nodes	Model 	Seq Len	Micro batch	Global Batch	TP	PP	Tokens/Sec/GPU	TFLOPs/s/GPU	Memory Usage'
-    echo "$NNODES	$MODEL_SIZE	$SEQ_LENGTH	$MBS	$BS	$TP	$PP	$TGS	$PERFORMANCE	$MEMUSAGE	$ETPI" |& tee -a ../out.csv
-    echo "$NNODES	$MODEL_SIZE	$SEQ_LENGTH	$MBS	$BS	$TP	$PP	$TGS	$PERFORMANCE	$MEMUSAGE	$ETPI" |& tee -a out.csv
+    'EXP_NAME	#Nodes	Model 	Seq Len	Micro batch	Global Batch	TP	PP	Tokens/Sec/GPU	TFLOPs/s/GPU	Memory Usage'
+    echo "${EXP_NAME}	$NNODES	$MODEL_SIZE	$SEQ_LENGTH	$MBS	$BS	$TP	$PP	$TGS	$PERFORMANCE	$MEMUSAGE	$ETPI" |& tee -a ../out.csv
+    echo "${EXP_NAME}	$NNODES	$MODEL_SIZE	$SEQ_LENGTH	$MBS	$BS	$TP	$PP	$TGS	$PERFORMANCE	$MEMUSAGE	$ETPI" |& tee -a out.csv
 else
         echo "Not the final node; check another the output for another node!"
         exit 1
