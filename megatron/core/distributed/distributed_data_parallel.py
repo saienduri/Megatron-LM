@@ -49,6 +49,12 @@ class DistributedDataParallel(MegatronModule):
         torch_compiling: bool = False,
     ):
         super().__init__(config=config)
+        
+        if torch_compiling and 1:
+            import torch
+            model_module = torch.compile(module, mode="max-autotune-no-cudagraphs")
+            module = model_module
+
         self.module = module
 
         # Set bucket_size to infinity if overlap_grad_reduce is False.

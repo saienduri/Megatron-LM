@@ -513,11 +513,11 @@ def setup_model_and_optimizer(model_provider_func,
         if args.tensor_model_parallel_size > 1:
             import torch._dynamo
             torch._dynamo.config.suppress_errors = True
-        new_model = []
-        for model_module in model:
-            model_module = torch.compile(model_module, mode="max-autotune-no-cudagraphs")
-            new_model.append(model_module)
-        model = new_model
+        # new_model = []
+        # for model_module in model:
+        #     model_module = torch.compile(model_module, mode="max-autotune-no-cudagraphs")
+        #     new_model.append(model_module)
+        # model = new_model
 
     return model, optimizer, opt_param_scheduler
 
