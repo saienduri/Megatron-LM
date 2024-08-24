@@ -509,7 +509,6 @@ def setup_model_and_optimizer(model_provider_func,
             optimizer.reload_model_params()
 
     if args.torch_compile:
-        import torch
         if args.tensor_model_parallel_size > 1:
             import torch._dynamo
             torch._dynamo.config.suppress_errors = True
