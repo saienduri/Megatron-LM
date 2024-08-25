@@ -2,6 +2,7 @@ import os
 import argparse
 import glob
 import os
+import subprocess
 
 parser = argparse.ArgumentParser(description='scan_multi_nodes',
                                     allow_abbrev=False)
@@ -10,9 +11,9 @@ parser.add_argument('--master_node', action='store_true', default=False,
                     help='Master node or Slave node')
 parser.add_argument('--num_nodes', type=int, default=4,
                     help='number of nodes')
-parser.add_argument('--node_rank', type=int, default=2,
+parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
-parser.add_argument('--ip_list', type=list, default=['10.11.8.143', '10.11.8.145', '10.11.8.151', '10.11.8.152'],
+parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.152', '10.11.8.153', '10.11.8.143'],
                     help='the IP address for each nodes')
 parser.add_argument('--master_port', type=int, default=23731,
                     help='Port number for Node2Node communication')
@@ -30,7 +31,7 @@ parser.add_argument('--main_file', type=str, default='tune_basetrain.sh',
                     help='the main script for profiling')
 parser.add_argument('--user_name', type=str, default='amd',
                     help='user name for remote nodes')
-parser.add_argument('--repo_path', type=str, default='/home/amd/guihong/megatron-lm-jiang',
+parser.add_argument('--repo_path', type=str, default=None, #'~/guihong/megatron_lm',
                     help='the path where storing this folder')
 args = parser.parse_args()
 
@@ -165,10 +166,9 @@ def slave_node():
 
 def sync_file_among_nodes():
     assert args.node_rank==0
-    all_lines = open('scan_onenode.py').readlines()
+    all_lines = open('scan_multinode.py').readlines()
     for node_rank in range(1, args.num_nodes):
-        os.system('scp *.sh {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
-        os.system('scp *.py {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
+        os.system('rsync -av *.sh {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
         os.system('rsync -av megatron {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
         # os.system('rsync -av pytorch_afo_testkit {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
         os.system('rsync -av tasks {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
@@ -182,11 +182,16 @@ def sync_file_among_nodes():
                 if line_idx<20 and '--node_rank' in line and 'parser.add_argument(' in line:
                     line = 'parser.add_argument(\'--node_rank\', type=int, default={},'.format(node_rank)
                 print(line, file=file_handler)
-        os.system('scp {} {}@{}:{}/scan_onenode.py'.format(out_file, args.user_name, args.ip_list[node_rank], args.repo_path))
+        os.system('rsync -av *.py {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
+        os.system('scp *.py {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
 
     os.system('rm sync_files_*')
 
 def main():
+    if args.repo_path is None:
+        args.repo_path=subprocess.check_output(['pwd']).decode('utf-8')[:-1]
+
+
     if args.sync_files:
         sync_file_among_nodes()
     else:
