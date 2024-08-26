@@ -13,6 +13,18 @@
 
 3. Run training, modify `NICs/data path/weight path/master ip/master port` in `finetune_llama2_chat.sh` if necessary
 
+    NCCL environment variables:
+    - NCCL_IB_HCA: list all IB NICs in current node
+    - NCCL_IB_GID_INDEX
+        ```bash
+        $ sudo show_gids
+        DEV PORT INDEX GID IPv4 VER DEV
+        mlx5_0 1 3 fe80:0000:0000:0000:e61d:2dff:fef2:a45c V1 ens785f0
+        ...
+        ```
+        set NCCL_IB_GID_INDEX=3 if mlx5_0 is the IB NIC you want to use
+    
+    - NCCL_SOCKET_IFNAME/GLOO_SOCKET_IFNAME: IB NIC name
     ```bash
     bash sft_llama2.sh
     ```
