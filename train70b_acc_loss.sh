@@ -157,10 +157,10 @@ GPT_ARGS="
     --normalization RMSNorm \
     --micro-batch-size $MBS \
     --global-batch-size $BS \
-    --lr 3.0e-8 \
+    --lr 1.0e-4 \
     --train-iters $TOTAL_ITERS \
     --lr-decay-style cosine \
-    --min-lr 3.0e-9 \
+    --min-lr 1.0e-5 \
     --weight-decay 1e-1 \
     --lr-warmup-fraction .01 \
     --optimizer $OPTIMIZER \
