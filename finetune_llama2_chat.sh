@@ -3,9 +3,6 @@ export TORCH_NCCL_HIGH_PRIORITY=1
 export NCCL_CHECKS_DISABLE=1
 export NCCL_IB_HCA=bnxt_re0,bnxt_re1,bnxt_re2,bnxt_re3,bnxt_re6,bnxt_re7,bnxt_re8,bnxt_re9
 export NCCL_IB_GID_INDEX=3
-export NCCL_CROSS_NIC=0
-export NCCL_MIN_NCHANNELS=32
-export NCCL_NET_GDR_LEVEL=PHB
 export NCCL_SOCKET_IFNAME=ens51f0np0
 export GLOO_SOCKET_IFNAME=ens51f0np0
 
