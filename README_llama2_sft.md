@@ -1,3 +1,25 @@
+0. Envionment Setup
+- Host
+
+    - Turn off numa balancing
+        ```bash
+        sudo sysctl kernel.numa_balancing=0
+        echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+        ```
+    - Turn on `iommu=pt`: follow the steps in https://rocm.docs.amd.com/projects/install-on-linux/en/docs-6.1.2/how-to/native-install/install-faq.html#issue-5-application-hangs-on-multi-gpu-systems, if your OS is centos, try: https://www.nixcraft.com/t/how-to-update-grub-on-rhel-or-centos-linux/3824 (NOTE: this step will update GRUB, please reboot afterwards.)
+- Docker 
+    ```bash
+    docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --ulimit nofile=-1:-1 --ulimit memlock=-1:-1 --name llama2-70b  rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned_0621release
+    ```
+- In docker container, update RCCL:
+    ```bash
+    cd /var/lib/jenkins
+    git clone https://github.com/ROCm/rccl
+    cd rccl
+    ./install -i -l
+    ```
+    the linking stage will last for ~20 minutes, please be patient.
+
 1. Prepare the megatron weights, modify ORIGIN_MODEL_PATH (pretrained weights) in prepare_sft_llama2.sh if necessary 
 
     ```bash
@@ -15,6 +37,18 @@
 
     NCCL environment variables:
     - NCCL_IB_HCA: list all IB NICs in current node
+        ```bash
+        $ ibstat | grep mlx5
+        CA ’mlx5_0’
+        CA ’mlx5_1’
+        CA ’mlx5_2’
+        CA ’mlx5_3’
+        CA ’mlx5_4’
+        CA ’mlx5_5’
+        CA ’mlx5_6’
+        CA ’mlx5_7’
+        ```
+        so, `NCCL_IB_HCA=mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7`
     - NCCL_IB_GID_INDEX
         ```bash
         $ sudo show_gids
@@ -24,10 +58,13 @@
         ```
         set NCCL_IB_GID_INDEX=3 if mlx5_0 is the IB NIC you want to use
     
-    - NCCL_SOCKET_IFNAME/GLOO_SOCKET_IFNAME: IB NIC name
-    ```bash
-    bash sft_llama2.sh
-    ```
+    - NCCL_SOCKET_IFNAME/GLOO_SOCKET_IFNAME: IB NIC name, such ax mlx5_0
+
+    Start training, here we go!
+
+        ```bash
+        bash sft_llama2.sh
+        ```
 
 4. Convert megatron weights to HF, modify the following model path is necessary
 
