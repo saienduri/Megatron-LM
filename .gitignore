@@ -10,3 +10,4 @@ logs
 checkpoints
 experiment
 data
+out.csv

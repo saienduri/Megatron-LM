@@ -51,29 +51,23 @@ PP="${PP:-1}"
 MBS="${MBS:-2}"
 BS="${BS:-8}"
 SEQ_LENGTH="${SEQ_LENGTH:-4096}"
-TOTAL_ITERS="${TOTAL_ITERS:-4}"
+TOTAL_ITERS="${TOTAL_ITERS:-100000}"
 SEQ_PARALLEL="${SEQ_PARALLEL:-1}" 
 CONTI_PARAMS="${CONTI_PARAMS:-0}"
 OPTIMIZER="${OPTIMIZER:-sgd}"
 TE_FP16="${TE_FP16:-0}"
 
 
-
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
 
-CHECKPOINT_PATH=$EXPERIMENT_DIR/ckpts
-rm -rf $CHECKPOINT_PATH
-mkdir -p $CHECKPOINT_PATH
+CHECKPOINT_PATH=../checkpoint/llama2_70b/megatron
 DATA_DIR=$EXPERIMENT_DIR/data
 mkdir -p $DATA_DIR
+TRAIN_DATA=../data/openhermes-2.5/openhermes2_5.jsonl #1001551
+VALID_DATA=../data/openhermes-2.5/openhermes2_5.jsonl
 
-TOKENIZER_MODEL=$EXPERIMENT_DIR/tokenizer.model
-
-# Download the tokenizer model
-if ! [ -f "$TOKENIZER_MODEL" ]; then
-wget -O $TOKENIZER_MODEL https://huggingface.co/NousResearch/Llama-2-7b-chat-hf/resolve/main/tokenizer.model
-fi
+TOKENIZER_MODEL=../checkpoint/llama2_70b/hf
 
 # Prepare the dataset
 echo 'import argparse
@@ -90,8 +84,6 @@ if __name__ == "__main__":
 
     dataset = load_dataset("bookcorpus", split="train")
     dataset.to_json(out_dir / "bookcorpus_megatron.json")' > prepare_bookcorpus_megatron_dataset.py
-
-DATA_PATH=${DATA_DIR}/bookcorpus_text_sentence
 
 # if ! [ -f "${DATA_DIR}/bookcorpus_text_sentence.idx" ]; then
 #   echo "Dataset file does not exist, creating..."
@@ -180,11 +172,19 @@ GPT_ARGS="
     # --no-masked-softmax-fusion \
 
 DATA_ARGS="
-    --data-path $DATA_PATH \
-    --tokenizer-type Llama2Tokenizer \
-    --tokenizer-model ${TOKENIZER_MODEL} \
+    --task GPT-CHAT \
     --split 949,50,1 \
-    --mock-data
+    --train-data $TRAIN_DATA \
+    --valid-data $VALID_DATA \
+    --tokenizer-type HFTokenizer \
+    --tokenizer-model ${TOKENIZER_MODEL} \
+    --dataloader-type cyclic \
+    --save-interval 200000 \
+    --tensorboard-dir $LOG_DIR \
+    --save $LOG_DIR \
+    --log-interval 1 \
+    --eval-interval 320000 \
+    --eval-iters 10
 "
 
 OUTPUT_ARGS="
@@ -216,19 +216,6 @@ TRAIN_ARGS="--lr 3e-7 \
         # --lr-warmup-fraction .001 \
 	# --adam-beta1 0.9 \
 	# --adam-beta2 0.95 \
-
-COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
-                      --valid-data $VALID_DATA \
-                      --tokenizer-type HFTokenizer \
-                      --tokenizer-model ${TOKENIZER_MODEL} \
-                      --load $PRETRAINED_CHECKPOINT \
-                      --dataloader-type cyclic \
-                      --save-interval 200 \
-                      --tensorboard-dir $CHECKPOINT_PATH \
-                      --save $CHECKPOINT_PATH \
-                      --log-interval 1 \
-                      --eval-interval 320000 \
-                      --eval-iters 10"
 
 
 CKPT_LOAD_ARGS="--exit-on-missing-checkpoint \
@@ -285,7 +272,6 @@ run_cmd="
         $DATA_ARGS \
         $OUTPUT_ARGS \
         $EXTRA_ARGS \
-        --load $CHECKPOINT_PATH
 "
 
 if [ "$TEE_OUTPUT" -eq 0 ]; then 

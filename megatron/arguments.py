@@ -43,6 +43,7 @@ def parse_args(extra_args_provider=None, ignore_unknown_args=False):
     parser = _add_retro_args(parser)
     parser = _add_experimental_args(parser)
     parser = _add_profiling_args(parser)
+    parser = _add_tasks_args(parser)
 
     # Custom arguments.
     if extra_args_provider is not None:
@@ -1485,6 +1486,19 @@ def _add_profiling_args(parser):
                        help='enable the profiling')
     return parser
 
-
+def _add_tasks_args(parser):
+    """Provide extra arguments required for tasks."""
+    group = parser.add_argument_group(title='tasks')
+    group.add_argument('--task', type=str, required=True,
+                       help='Task name.')
+    group.add_argument('--keep-last', action='store_true',
+                       help='Keep the last batch (maybe incomplete) in'
+                       'the data loader')
+    group.add_argument('--train-data', nargs='+', default=None,
+                       help='Whitespace separated paths or corpora names '
+                       'for training.')
+    group.add_argument('--valid-data', nargs='*', default=None,
+                       help='path(s) to the validation data.')
+    return parser
 
 

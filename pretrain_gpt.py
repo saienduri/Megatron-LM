@@ -29,6 +29,7 @@ from megatron.utils import (
 from megatron.arguments import core_transformer_config_from_args
 # from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_with_transformer_engine_spec
 from torch.profiler import profile, record_function, ProfilerActivity
+from tasks.gpt_chat.data import ChatDataset
 
 
 def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megatron.model.GPTModel]:
@@ -183,27 +184,28 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     """
     args = get_args()
 
-    config = core_gpt_dataset_config_from_args(args)
-
-    if config.mock:
+    if args.mock_data:
+        config = core_gpt_dataset_config_from_args(args)
         dataset_type = MockGPTDataset
+
+        print_rank_0("> building train, validation, and test datasets for GPT ...")
+        train_ds, valid_ds, test_ds = BlendedMegatronDatasetBuilder(
+            dataset_type,
+            train_val_test_num_samples,
+            config
+        ).build()
+        print_rank_0("> finished creating mock datasets ...")
     else:
-        dataset_type = GPTDataset
-
-    dataset_type = MockGPTDataset
-    print(dataset_type)
-    print_rank_0("> building train, validation, and test datasets for GPT ...")
-
-    train_ds, valid_ds, test_ds = BlendedMegatronDatasetBuilder(
-        dataset_type,
-        train_val_test_num_samples,
-        config
-    ).build()
-
-    print_rank_0("> finished creating GPT datasets ...")
+        tokenizer = get_tokenizer()
+        train_ds = ChatDataset('training', args.train_data,
+                                    tokenizer, args.seq_length, pad_to_max_length=True)
+        valid_ds = ChatDataset('validation', args.valid_data,
+                                    tokenizer, args.seq_length, pad_to_max_length=True)
+        test_ds = ChatDataset('test', args.valid_data,
+                                    tokenizer, args.seq_length, pad_to_max_length=True)
+        print_rank_0("> finished creating chat datasets ...")
 
     return train_ds, valid_ds, test_ds
-
 
 
 if __name__ == "__main__":

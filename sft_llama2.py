@@ -25,24 +25,6 @@ from tasks.gpt_chat.data import ChatDataset
 # from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_with_transformer_engine_spec
 
 
-def get_tasks_args(parser):
-    """Provide extra arguments required for tasks."""
-    group = parser.add_argument_group(title='tasks')
-
-    group.add_argument('--task', type=str, required=True,
-                       help='Task name.')
-    group.add_argument('--keep-last', action='store_true',
-                       help='Keep the last batch (maybe incomplete) in'
-                       'the data loader')
-    group.add_argument('--train-data', nargs='+', default=None,
-                       help='Whitespace separated paths or corpora names '
-                       'for training.')
-    group.add_argument('--valid-data', nargs='*', default=None,
-                       help='path(s) to the validation data.')
-
-    return parser
-
-
 def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megatron.model.GPTModel]:
     """Builds the model.
 
@@ -195,7 +177,7 @@ def main():
              model_provider,
              ModelType.encoder_or_decoder,
              forward_step,
-             extra_args_provider=get_tasks_args)
+             )
 
 
 if __name__ == "__main__":

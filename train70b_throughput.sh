@@ -92,6 +92,8 @@ if __name__ == "__main__":
     dataset.to_json(out_dir / "bookcorpus_megatron.json")' > prepare_bookcorpus_megatron_dataset.py
 
 DATA_PATH=${DATA_DIR}/bookcorpus_text_sentence
+TRAIN_DATA=../data/openhermes-2.5/openhermes2_5.jsonl #1001551
+VALID_DATA=../data/openhermes-2.5/openhermes2_5.jsonl
 
 # if ! [ -f "${DATA_DIR}/bookcorpus_text_sentence.idx" ]; then
 #   echo "Dataset file does not exist, creating..."
@@ -180,6 +182,9 @@ GPT_ARGS="
     # --no-masked-softmax-fusion \
 
 DATA_ARGS="
+    --task GPT-CHAT \
+    --train-data $TRAIN_DATA \
+    --valid-data $VALID_DATA \
     --data-path $DATA_PATH \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
