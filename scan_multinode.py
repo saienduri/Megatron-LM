@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser(description='scan_multi_nodes',
 
 parser.add_argument('--master_node', action='store_true', default=False,
                     help='Master node or Slave node')
-parser.add_argument('--num_nodes', type=int, default=8,
+parser.add_argument('--num_nodes', type=int, default=4,
                     help='number of nodes')
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
