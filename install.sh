@@ -4,4 +4,4 @@ cd ..
 path=`pwd`
 cd ../set_bc_ib
 bash set_bc_ib.sh
-cd path
+cd $path

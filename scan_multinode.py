@@ -9,17 +9,20 @@ parser = argparse.ArgumentParser(description='scan_multi_nodes',
 
 parser.add_argument('--master_node', action='store_true', default=False,
                     help='Master node or Slave node')
-parser.add_argument('--num_nodes', type=int, default=4,
+parser.add_argument('--num_nodes', type=int, default=8,
                     help='number of nodes')
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
-parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.152', '10.11.8.153', '10.11.8.143'],
+parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.143', \
+                                                     '10.11.8.152', '10.11.8.153', \
+                                                     '10.11.8.142', '10.11.8.144', \
+                                                     '10.11.8.145', '10.11.8.146', ],
                     help='the IP address for each nodes')
 parser.add_argument('--master_port', type=int, default=23731,
                     help='Port number for Node2Node communication')
 parser.add_argument('--num_runs', type=int, default=1,
                     help='Number of runs')
-parser.add_argument('--num_iters', type=int, default=6,
+parser.add_argument('--num_iters', type=int, default=20,
                     help='Number of training iterations per run')
 parser.add_argument('--torch_compile', default=False,
                     action="store_true", help='using torch compile')
@@ -88,8 +91,13 @@ correct_compile_test=[
 ]
 
 configs_grad_overlap_comm_four_nodes = [
-    [5, 10, 8, 1, 1],
-    [5, 20, 8, 1, 1],
+    [4, 32, 8, 1, 0],
+
+    [5, 5,  8, 1, 0],
+    [5, 40, 8, 1, 0],
+
+    [6, 6,  8, 1, 0],
+    [6, 48, 8, 1, 0],
 ]
 
 def raw_scan():
@@ -169,6 +177,7 @@ def sync_file_among_nodes():
     all_lines = open('scan_multinode.py').readlines()
     for node_rank in range(1, args.num_nodes):
         os.system('rsync -av *.sh {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
+        os.system('rsync -av *.py {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
         os.system('rsync -av megatron {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
         # os.system('rsync -av pytorch_afo_testkit {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
         os.system('rsync -av tasks {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
@@ -182,15 +191,13 @@ def sync_file_among_nodes():
                 if line_idx<20 and '--node_rank' in line and 'parser.add_argument(' in line:
                     line = 'parser.add_argument(\'--node_rank\', type=int, default={},'.format(node_rank)
                 print(line, file=file_handler)
-        os.system('rsync -av *.py {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
-        os.system('scp *.py {}@{}:{}/'.format(args.user_name, args.ip_list[node_rank], args.repo_path))
+        os.system('scp {} {}@{}:{}/scan_multinode.py'.format(out_file, args.user_name, args.ip_list[node_rank], args.repo_path))
 
     os.system('rm sync_files_*')
 
 def main():
     if args.repo_path is None:
         args.repo_path=subprocess.check_output(['pwd']).decode('utf-8')[:-1]
-
 
     if args.sync_files:
         sync_file_among_nodes()

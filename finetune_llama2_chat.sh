@@ -14,29 +14,32 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NCCL_PROTO=Simple
 export RCCL_MSCCL_ENABLE=0
 
-TRAIN_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl #1001551
-VALID_DATA=/dockerx/OpenHermes-2.5/openhermes2_5.jsonl
+TRAIN_DATA=../data/openhermes-2.5/openhermes2_5.jsonl #1001551
+VALID_DATA=../data/openhermes-2.5/openhermes2_5.jsonl
 
-TOKENIZER_MODEL=checkpoints/llama2_7b/hf
-PRETRAINED_CHECKPOINT=checkpoints/llama2_7b/megatron
-CHECKPOINT_PATH=checkpoints/llama2_7b/megatron_chat_4k_openhermes_2_5_lr3e-7_bs128
+
+TOKENIZER_MODEL=../checkpoint/llama2_70b/hf
+# PRETRAINED_CHECKPOINT=../checkpoint/llama2_70b/megatron
+CHECKPOINT_PATH=../checkpoint/llama2_70b/megatron_compile_chat_4k_openhermes_2_5_check_compile
 
 GPUS_PER_NODE=`python -c "import torch; print(torch.cuda.device_count())"`
 # Change for multinode config
-MASTER_ADDR=localhost
-MASTER_PORT=6006
-NNODES=1
+MASTER_ADDR=tw051
+MASTER_PORT=37373
+NNODES=2
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-MODEL_SIZE="${MODEL_SIZE:-7}"
-TP="${TP:-4}"
+MODEL_SIZE="${MODEL_SIZE:-70}"
+TP="${TP:-8}"
 PP="${PP:-1}"
-MBS="${MBS:-4}"
+MBS="${MBS:-1}"
 _BS=`python -c "import torch; print(int($GPUS_PER_NODE*$MBS))"`
-BS="${BS:-$_BS}"
+BS="${BS:-8}"
 EPOCHS="${EPOCHS:-1}"
 SEQ_LENGTH="${SEQ_LENGTH:-4096}"
+NO_TORCH_COMPILE="${NO_TORCH_COMPILE:-1}"
+
 # total number of samples: 1001551
 _TOTAL_ITERS=`python -c "import math; print(int(math.floor(1001551/$BS*$EPOCHS)))"`
 TOTAL_ITERS="${TOTAL_ITERS:-$_TOTAL_ITERS}"
@@ -103,12 +106,13 @@ GPT_ARGS="
     --bf16
 "
 
-TRAIN_ARGS="--lr 3e-7 \
-        --min-lr 3e-7 \
+TRAIN_ARGS="--lr 1e-4 \
+        --min-lr 1e-5 \
         --lr-decay-iters 320000 \
         --lr-decay-style cosine \
         --weight-decay 1.0e-1 \
         --clip-grad 1.0 \
+        --optimizer sgd \
         "
         # --lr-warmup-fraction .001 \
 	# --adam-beta1 0.9 \
@@ -118,19 +122,22 @@ COMMON_TASK_ARGS_EXT="--train-data $TRAIN_DATA \
                       --valid-data $VALID_DATA \
                       --tokenizer-type HFTokenizer \
                       --tokenizer-model ${TOKENIZER_MODEL} \
-                      --load $PRETRAINED_CHECKPOINT \
                       --dataloader-type cyclic \
-                      --save-interval 200 \
+                      --save-interval 200000 \
                       --tensorboard-dir $CHECKPOINT_PATH \
                       --save $CHECKPOINT_PATH \
                       --log-interval 1 \
                       --eval-interval 320000 \
                       --eval-iters 10"
 
+                #       --load $PRETRAINED_CHECKPOINT \
+
 CKPT_LOAD_ARGS="--exit-on-missing-checkpoint \
         --no-load-optim \
         --use-checkpoint-args \
         --no-load-rng"
+
+CKPT_LOAD_ARGS=""
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -146,8 +153,14 @@ EXTRA_ARGS="
     --num-workers 8 \
     --no-gradient-accumulation-fusion \
     --no-masked-softmax-fusion \
+    --overlap-param-gather \
+    --overlap-grad-reduce \
     --use-distributed-optimizer
 "
+
+if [ "$NO_TORCH_COMPILE" -eq 1 ]; then
+EXTRA_ARGS="$EXTRA_ARGS --no-torch-compile"
+fi
 
 torchrun $DISTRIBUTED_ARGS sft_llama2.py \
        --task GPT-CHAT \
