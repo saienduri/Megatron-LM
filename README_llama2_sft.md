@@ -6,19 +6,92 @@
         sudo sysctl kernel.numa_balancing=0
         echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
         ```
+    - `ulimit` settings, reboot afterwards if necessary
+        ```bash
+        #!/bin/bash
+        add_or_update_limit() {
+            local limit_type=$1
+            local limit_value=$2
+            local file_path=$3
+
+            if grep -qE "^\* ${limit_type} ${limit_value}" "$file_path"; then
+                echo "${limit_type} already set to ${limit_value} in ${file_path}"
+            else
+                sed -i "/\* ${limit_type} /d" "$file_path"
+                echo "* ${limit_type} ${limit_value}" >> "$file_path"
+                echo "Set ${limit_type} to ${limit_value} in ${file_path}"
+            fi
+        }
+
+        LIMITS_CONF="/etc/security/limits.conf"
+
+        if [ "$(id -u)" -ne 0 ]; then
+            echo "This script must be run as root"
+            exit 1
+        fi
+
+        add_or_update_limit "soft nofile" "unlimited" "$LIMITS_CONF"
+        add_or_update_limit "hard nofile" "unlimited" "$LIMITS_CONF"
+        add_or_update_limit "soft memlock" "unlimited" "$LIMITS_CONF"
+        add_or_update_limit "hard memlock" "unlimited" "$LIMITS_CONF"
+        ```
     - Turn on `iommu=pt`: follow the steps in https://rocm.docs.amd.com/projects/install-on-linux/en/docs-6.1.2/how-to/native-install/install-faq.html#issue-5-application-hangs-on-multi-gpu-systems, if your OS is centos, try: https://www.nixcraft.com/t/how-to-update-grub-on-rhel-or-centos-linux/3824 (NOTE: this step will update GRUB, please reboot afterwards.)
+    - Disable ACS
+        ```bash
+        #!/bin/bash
+        #
+        # Disable ACS on every device that supports it
+        #
+        PLATFORM=$(dmidecode --string system-product-name)
+        logger "PLATFORM=${PLATFORM}"
+        # Enforce platform check here.
+        #case "${PLATFORM}" in
+                #"OAM"*)
+                        #logger "INFO: Disabling ACS is no longer necessary for ${PLATFORM}"
+                        #exit 0
+                        #;;
+                #*)
+                        #;;
+        #esac
+        # must be root to access extended PCI config space
+        if [ "$EUID" -ne 0 ]; then
+                echo "ERROR: $0 must be run as root"
+                exit 1
+        fi
+        for BDF in `lspci -d "*:*:*" | awk '{print $1}'`; do
+                # skip if it doesn't support ACS
+                setpci -v -s ${BDF} ECAP_ACS+0x6.w > /dev/null 2>&1
+                if [ $? -ne 0 ]; then
+                        #echo "${BDF} does not support ACS, skipping"
+                        continue
+                fi
+                logger "Disabling ACS on `lspci -s ${BDF}`"
+                setpci -v -s ${BDF} ECAP_ACS+0x6.w=0000
+                if [ $? -ne 0 ]; then
+                        logger "Error enabling directTrans ACS on ${BDF}"
+                        continue
+                fi
+                NEW_VAL=`setpci -v -s ${BDF} ECAP_ACS+0x6.w | awk '{print $NF}'`
+                if [ "${NEW_VAL}" != "0000" ]; then
+                        logger "Failed to enabling directTrans ACS on ${BDF}"
+                        continue
+                fi
+        done
+        exit 0
+        ```
 - Docker 
     ```bash
-    docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --ulimit nofile=-1:-1 --ulimit memlock=-1:-1 --name llama2-70b  rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned_0621release
+    docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --ulimit nofile=-1 --ulimit memlock=-1 --name llama2-70b  rocm/pytorch-private:ll2_7b_train_csrikris_mi308_13909_tuned_0621release
     ```
-- In docker container, update RCCL:
-    ```bash
-    cd /var/lib/jenkins
-    git clone https://github.com/ROCm/rccl
-    cd rccl
-    ./install -i -l
-    ```
-    the linking stage will last for ~20 minutes, please be patient.
+    
+    - In docker container, update RCCL:
+        ```bash
+        cd /var/lib/jenkins
+        git clone https://github.com/ROCm/rccl
+        cd rccl
+        ./install -i -l
+        ```
+        the linking stage will last for ~20 minutes, please be patient.
 
 1. Prepare the megatron weights, modify ORIGIN_MODEL_PATH (pretrained weights) in prepare_sft_llama2.sh if necessary 
 
@@ -61,10 +134,9 @@
     - NCCL_SOCKET_IFNAME/GLOO_SOCKET_IFNAME: IB NIC name, such ax mlx5_0
 
     Start training, here we go!
-
-        ```bash
-        bash sft_llama2.sh
-        ```
+    ```bash
+    bash sft_llama2.sh
+    ```
 
 4. Convert megatron weights to HF, modify the following model path is necessary
 
