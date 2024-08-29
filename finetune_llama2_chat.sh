@@ -64,6 +64,14 @@ elif [[ $MODEL_SIZE -eq 13 ]]; then
         SEQ_LENGTH=$SEQ_LENGTH
         MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
         NUM_KV_HEADS=40 # llama2 70B uses GQA
+elif [[ $MODEL_SIZE -eq 20 ]]; then
+        HIDDEN_SIZE=8192 # e.g. llama-13b: 5120
+        FFN_HIDDEN_SIZE=28672 # e.g. llama-13b: 13824
+        NUM_LAYERS=20 # e.g. llama-13b: 40
+        NUM_HEADS=64 # e.g. llama-13b: 40
+        NUM_KV_HEADS=8 # llama2 70B uses GQA
+        SEQ_LENGTH=$SEQ_LENGTH
+        MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
 elif [[ $MODEL_SIZE -eq 70 ]]; then
         HIDDEN_SIZE=8192 # e.g. llama-13b: 5120
         FFN_HIDDEN_SIZE=28672 # e.g. llama-13b: 13824
@@ -169,5 +177,5 @@ torchrun $DISTRIBUTED_ARGS sft_llama2.py \
        $TRAIN_ARGS \
        $COMMON_TASK_ARGS_EXT \
        $EXTRA_ARGS \
-       $@
+       $@ >& test_compile.log
 

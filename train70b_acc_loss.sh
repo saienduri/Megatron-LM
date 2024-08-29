@@ -119,6 +119,14 @@ elif [[ $MODEL_SIZE -eq 13 ]]; then
         SEQ_LENGTH=$SEQ_LENGTH
         MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
         NUM_KV_HEADS=40 # llama2 70B uses GQA
+elif [[ $MODEL_SIZE -eq 20 ]]; then
+        HIDDEN_SIZE=8192 # e.g. llama-13b: 5120
+        FFN_HIDDEN_SIZE=28672 # e.g. llama-13b: 13824
+        NUM_LAYERS=20 # e.g. llama-13b: 40
+        NUM_HEADS=64 # e.g. llama-13b: 40
+        NUM_KV_HEADS=8 # llama2 70B uses GQA
+        SEQ_LENGTH=$SEQ_LENGTH
+        MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
 elif [[ $MODEL_SIZE -eq 70 ]]; then
         HIDDEN_SIZE=8192 # e.g. llama-13b: 5120
         FFN_HIDDEN_SIZE=28672 # e.g. llama-13b: 13824
@@ -157,19 +165,24 @@ GPT_ARGS="
     --normalization RMSNorm \
     --micro-batch-size $MBS \
     --global-batch-size $BS \
-    --lr 1.0e-4 \
     --train-iters $TOTAL_ITERS \
-    --lr-decay-style cosine \
-    --min-lr 1.0e-5 \
-    --weight-decay 1e-1 \
-    --lr-warmup-fraction .01 \
-    --optimizer $OPTIMIZER \
     --no-async-tensor-model-parallel-allreduce \
-    --clip-grad 1.0 \
     --bf16 \
     --no-masked-softmax-fusion
 "
     # --no-masked-softmax-fusion \
+
+TRAIN_ARGS="--lr 1e-4 \
+        --min-lr 1e-5 \
+        --lr-decay-iters 320000 \
+        --lr-decay-style cosine \
+        --weight-decay 1.0e-1 \
+        --clip-grad 1.0 \
+        --optimizer sgd \
+"
+        # --lr-warmup-fraction .001 \
+        # --adam-beta1 0.9 \
+        # --adam-beta2 0.95 \
 
 DATA_ARGS="
     --task GPT-CHAT \
@@ -181,7 +194,6 @@ DATA_ARGS="
     --dataloader-type cyclic \
     --save-interval 200000 \
     --tensorboard-dir $LOG_DIR \
-    --save $LOG_DIR \
     --log-interval 1 \
     --eval-interval 320000 \
     --eval-iters 10
@@ -189,7 +201,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
+    --save-interval 5000 \
     --log-throughput \
     --no-save-optim \
     --eval-iters -1
@@ -206,16 +218,7 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT \
 "
 
-TRAIN_ARGS="--lr 3e-7 \
-        --min-lr 3e-7 \
-        --lr-decay-iters 320000 \
-        --lr-decay-style cosine \
-        --weight-decay 1.0e-1 \
-        --clip-grad 1.0 \
-        "
-        # --lr-warmup-fraction .001 \
-	# --adam-beta1 0.9 \
-	# --adam-beta2 0.95 \
+
 
 
 CKPT_LOAD_ARGS="--exit-on-missing-checkpoint \
@@ -272,6 +275,7 @@ run_cmd="
         $DATA_ARGS \
         $OUTPUT_ARGS \
         $EXTRA_ARGS \
+        $TRAIN_ARGS \
 "
 
 if [ "$TEE_OUTPUT" -eq 0 ]; then 

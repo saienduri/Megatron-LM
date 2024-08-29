@@ -28,6 +28,8 @@ parser.add_argument('--torch_compile', default=False,
                     action="store_true", help='using torch compile')
 parser.add_argument('--torch_profile', default=False,
                     action="store_true", help='using torch profile')
+parser.add_argument('--read_perf', default=False,
+                    action="store_true", help='read the perf numbers')
 parser.add_argument('--sync_files', default=False,
                     action="store_true", help='synchronize this file among different nodes')
 parser.add_argument('--main_file', type=str, default='tune_basetrain.sh',
@@ -91,29 +93,41 @@ correct_compile_test=[
 ]
 
 configs_grad_overlap_comm_four_nodes = [
+    #mbs, gbs, tp, pp, profiling
+    [1, 1,  8, 1, 0],
+    [1, 8,  8, 1, 0],
+
+    [2, 2,  8, 1, 0],
+    [2, 16, 8, 1, 0],
+
     [3, 3,  8, 1, 0],
     [3, 24, 8, 1, 0],
+
     [4, 4,  8, 1, 0],
+    [4, 32, 8, 1, 0],
+
+    [5, 5,  8, 1, 0],
+    [5, 40, 8, 1, 0],
 ]
 
-def raw_scan():
-    for mbs in [2,1]:
-        for gbs_scale in [1,2,4,8]:
-            for total_parallel in [8]:
-                tp = total_parallel
-                minimal_gbs = 8//total_parallel
-                while tp>4:
-                    pp = total_parallel//tp
-                    gbs = minimal_gbs*gbs_scale*mbs*args.num_nodes
-                    configs = 'bash {} TP={} PP={} MBS={} BS={}'.format(args.main_file, tp, pp, mbs, gbs)
-                    if args.torch_compile:
-                        configs=configs+ ' NO_TORCH_COMPILE=0'
-                    if args.torch_profile:
-                        configs=configs+ ' ENABLE_PROFILING=1'
-                    os.system(configs)
-                    print(configs)
-                    tp = tp//2
-                    os.system('sleep 10')
+def read_perf():
+    for mbs, gbs, tp, pp, profiling in configs_grad_overlap_comm_four_nodes:
+        bs=args.num_nodes * 8 //(tp*pp)*gbs
+        train_file_expr=f'./experiment/{args.num_nodes}nodes_rank{args.node_rank}'+\
+                        f'_train_70B_mbs{mbs}_bs{bs}_tp{tp}_pp{pp}_optim_sgd_iter{args.num_iters}'+\
+                        f'/nocompile0_TE_FP16_0/2024-08-29_*/output_perf.log'
+        train_logs = glob.glob(train_file_expr)
+        for train_log in train_logs:
+            cmd = 'bash compute_flops.sh '
+            cmd += f' TRAIN_LOG={train_log} '
+            cmd += f' MBS={mbs} '
+            cmd += f' BS={bs} '
+            cmd += f' TP={tp} '
+            cmd += f' PP={pp} '
+            cmd += f' NNODES={args.num_nodes} '
+            os.system(cmd)
+
+
 
 def check_all_ack(idx):
     got_all_file=True
@@ -197,10 +211,12 @@ def main():
 
     if args.sync_files:
         sync_file_among_nodes()
+    elif args.read_perf:
+        read_perf()
     else:
         for i in range(args.num_runs):
             if args.num_nodes==1:
-                raw_scan()
+                master_node()
 
             elif args.num_nodes>1:
                 if args.master_node or args.node_rank==0:
