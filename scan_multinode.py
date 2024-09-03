@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser(description='scan_multi_nodes',
 
 parser.add_argument('--master_node', action='store_true', default=False,
                     help='Master node or Slave node')
-parser.add_argument('--num_nodes', type=int, default=8,
+parser.add_argument('--num_nodes', type=int, default=4,
                     help='number of nodes')
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
@@ -41,77 +41,66 @@ parser.add_argument('--repo_path', type=str, default=None, #'~/guihong/megatron_
 args = parser.parse_args()
 
 perf_test=[
-    #mbs, gbs, tp, pp, profiling
-    [1, 1,  8, 1, 0],
-    [1, 2,  8, 1, 0],
-    [1, 4,  8, 1, 0],
-    [1, 8,  8, 1, 0],
+    #mbs, gbs, tp, pp, profiling, compiling
+    [1, 1,  8, 1, 0, 0],
+    [1, 2,  8, 1, 0, 0],
+    [1, 4,  8, 1, 0, 0],
+    [1, 8,  8, 1, 0, 0],
 
-    [2, 2,  8, 1, 0],
-    [2, 4,  8, 1, 0],
-    [2, 8,  8, 1, 0],
-    [2, 16, 8, 1, 0],
+    [2, 2,  8, 1, 0, 0],
+    [2, 4,  8, 1, 0, 0],
+    [2, 8,  8, 1, 0, 0],
+    [2, 16, 8, 1, 0, 0],
 
-    [3, 3,  8, 1, 0],
-    [3, 6,  8, 1, 0],
-    [3, 12, 8, 1, 0],
-    [3, 24, 8, 1, 0],
+    [3, 3,  8, 1, 0, 0],
+    [3, 6,  8, 1, 0, 0],
+    [3, 12, 8, 1, 0, 0],
+    [3, 24, 8, 1, 0, 0],
 
-    [4, 4,  8, 1, 0],
-    [4, 8,  8, 1, 0], 
-    [4, 16, 8, 1, 0],
-    [4, 32, 8, 1, 0],
+    [4, 4,  8, 1, 0, 0],
+    [4, 8,  8, 1, 0, 0], 
+    [4, 16, 8, 1, 0, 0],
+    [4, 32, 8, 1, 0, 0],
 
-    [5, 5,  8, 1, 0],
-    [5, 10, 8, 1, 0],
-    [5, 20, 8, 1, 0],
-    [5, 40, 8, 1, 0],
+    [5, 5,  8, 1, 0, 0],
+    [5, 10, 8, 1, 0, 0],
+    [5, 20, 8, 1, 0, 0],
+    [5, 40, 8, 1, 0, 0],
 
-    [6, 6,  8, 1, 0],
-    [6, 12, 8, 1, 0],
-    [6, 24, 8, 1, 0],
-    [6, 48, 8, 1, 0],
+    [6, 6,  8, 1, 0, 0],
+    [6, 12, 8, 1, 0, 0],
+    [6, 24, 8, 1, 0, 0],
+    [6, 48, 8, 1, 0, 0],
 ]
 correct_test=[
-    [1, 1,  8, 1, 1],
-    [1, 2,  8, 1, 1],
-    [2, 2,  8, 1, 1],
-    [2, 4,  8, 1, 1],
-    # [3, 3,  8, 1, 1],
-    # [4, 4,  8, 1, 1],
-#     [5, 5,  8, 1],
-#     [6, 6,  8, 1],
+    [1, 1,  8, 1, 1, 0],
+    [1, 2,  8, 1, 1, 0],
+    [2, 2,  8, 1, 1, 0],
+    [2, 4,  8, 1, 1, 0],
+    # [3, 3,  8, 1, 1, 0],
+    # [4, 4,  8, 1, 1, 0],
+#     [5, 5,  8, 1, 0, 0],
+#     [6, 6,  8, 1, 0, 0],
 ]
 
 correct_compile_test=[
-    [1, 1, 8, 1, 1],
-    [2, 2, 8, 1, 1],
-    [3, 3, 8, 1, 1],
-    [4, 4, 8, 1, 1],
-    [5, 5, 8, 1, 1],
-    [6, 6, 8, 1, 1],
+    [1, 1, 8, 1, 1, 0],
+    [2, 2, 8, 1, 1, 0],
+    [3, 3, 8, 1, 1, 0],
+    [4, 4, 8, 1, 1, 0],
+    [5, 5, 8, 1, 1, 0],
+    [6, 6, 8, 1, 1, 0],
 ]
 
 configs_grad_overlap_comm_four_nodes = [
-    #mbs, gbs, tp, pp, profiling
-    [1, 1,  8, 1, 0],
-    [1, 8,  8, 1, 0],
-
-    [2, 2,  8, 1, 0],
-    [2, 16, 8, 1, 0],
-
-    [3, 3,  8, 1, 0],
-    [3, 24, 8, 1, 0],
-
-    [4, 4,  8, 1, 0],
-    [4, 32, 8, 1, 0],
-
-    [5, 5,  8, 1, 0],
-    [5, 40, 8, 1, 0],
+    #mbs, gbs, tp, pp, profiling, compiling
+    # [4, 4,  8, 1, 1, 0],
+    # [4, 4,  8, 1, 1, 1],
+    [4, 16, 8, 1, 1, 0],
 ]
 
 def read_perf():
-    for mbs, gbs, tp, pp, profiling in configs_grad_overlap_comm_four_nodes:
+    for mbs, gbs, tp, pp, profiling, compiling in configs_grad_overlap_comm_four_nodes:
         bs=args.num_nodes * 8 //(tp*pp)*gbs
         train_file_expr=f'./experiment/{args.num_nodes}nodes_rank{args.node_rank}'+\
                         f'_train_70B_mbs{mbs}_bs{bs}_tp{tp}_pp{pp}_optim_sgd_iter{args.num_iters}'+\
@@ -137,12 +126,15 @@ def check_all_ack(idx):
     return got_all_file
 
 def master_node():
-    os.system('rm try_two_nodes_*')
-    os.system('sleep 20')
+    try:
+        os.system('rm try_two_nodes_*')
+    except:
+        pass
 
+    os.system('sleep 20')
     MASTER_IP = args.ip_list[0]
     for idx, config in enumerate(configs_grad_overlap_comm_four_nodes):
-        mbs, gbs, tp, pp, profile_tag = config
+        mbs, gbs, tp, pp, profile_tag, compiling_tag = config
         #'Micro batch,Global Batch,TP,PP'
         
         
@@ -150,7 +142,7 @@ def master_node():
             file_name = 'try_two_nodes_{}_{}_{}.sh'.format(args.num_nodes, idx, node)
             gbs_scale = args.num_nodes * 8 //(tp*pp)
             configs = ' TP={} PP={} MBS={} BS={} NODE_RANK={} NNODES={} MASTER_PORT={} MASTER_ADDR={} TOTAL_ITERS={}'.format(tp, pp, mbs, gbs*gbs_scale, node, args.num_nodes, args.master_port, args.ip_list[0], args.num_iters)
-            if args.torch_compile:
+            if args.torch_compile or compiling_tag:
                 configs=configs+ ' NO_TORCH_COMPILE=0'
             if args.torch_profile or profile_tag:
                 configs=configs+ ' ENABLE_PROFILING=1'
@@ -169,7 +161,10 @@ def master_node():
 
 
 def slave_node():
-    os.system('rm try_two_nodes_*')
+    try:
+        os.system('rm try_two_nodes_*')
+    except:
+        pass
     for idx, config in enumerate(configs_grad_overlap_comm_four_nodes):
         file_name = 'try_two_nodes_{}_{}_{}.sh'.format(args.num_nodes, idx, args.node_rank)
         while not os.path.isfile(file_name):
@@ -206,6 +201,7 @@ def sync_file_among_nodes():
     os.system('rm sync_files_*')
 
 def main():
+    assert args.num_iters>=8
     if args.repo_path is None:
         args.repo_path=subprocess.check_output(['pwd']).decode('utf-8')[:-1]
 

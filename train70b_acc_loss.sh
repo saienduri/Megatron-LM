@@ -288,3 +288,54 @@ if [ "$NO_TRAINING" -eq 0 ]; then
     eval $run_cmd
 fi
 
+
+echo 'import argparse
+import numpy as np
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+                        prog="Process Log")
+    parser.add_argument("filename")
+    args = parser.parse_args()
+
+    with open(args.filename) as f:
+        lines = f.readlines()
+    lines = lines[2:-1]
+    lines = [float(a) for a in lines]
+    mean = np.mean(np.array(lines))
+    print(mean)' > mean_log_value.py
+
+
+# echo '============================================================================================================'
+grep -Eo 'throughput per GPU [^|]*' $TRAIN_LOG | sed -E 's/.*throughput per GPU \(TFLOP\/s\/GPU\): ([0-9\.]+).*/\1/' > tmp.txt
+PERFORMANCE=$(python3 mean_log_value.py tmp.txt)
+echo "throughput per GPU: $PERFORMANCE" |& tee -a $TRAIN_LOG
+rm tmp.txt
+
+# echo '============================================================================================================'
+grep -Eo 'elapsed time per iteration [^|]*' $TRAIN_LOG | sed -E 's/.*elapsed time per iteration \(ms\): ([0-9\.]+).*/\1/' > tmp.txt
+ETPI=$(python3 mean_log_value.py tmp.txt)
+echo "elapsed time per iteration: $ETPI" |& tee -a $TRAIN_LOG
+
+TIME_PER_ITER=$(python3 mean_log_value.py tmp.txt 2>/dev/null | awk '{printf "%.6f", $0}')
+TGS=$(awk -v bs="$BS" -v sl="$SEQ_LENGTH" -v tpi="$TIME_PER_ITER" -v ws="$WORLD_SIZE" 'BEGIN {printf "%.6f", bs * sl * 1000/ (tpi * ws)}')
+echo "tokens/GPU/s: $TGS" |& tee -a $TRAIN_LOG
+rm tmp.txt
+
+echo '============================================================================================================'
+grep -Eo 'mem usages: [^|]*' $TRAIN_LOG | sed -E 's/.*mem usages: ([0-9\.]+).*/\1/' > tmp.txt
+MEMUSAGE=$(python3 mean_log_value.py tmp.txt)
+echo "mem usages: $MEMUSAGE" |& tee -a $TRAIN_LOG
+rm tmp.txt
+
+
+
+NUM_GROUPS=$(( ${NNODES} - 1 ))
+if [[ $NODE_RANK -eq $NUM_GROUPS ]]; then
+    'EXP_NAME	#Nodes	Model 	Seq Len	Micro batch	Global Batch	TP	PP	Tokens/Sec/GPU	TFLOPs/s/GPU	Memory Usage'
+    echo "${EXP_NAME}	$NNODES	$MODEL_SIZE	$SEQ_LENGTH	$MBS	$BS	$TP	$PP	$TGS	$PERFORMANCE	$MEMUSAGE	$ETPI" |& tee -a ../out.csv
+    echo "${EXP_NAME}	$NNODES	$MODEL_SIZE	$SEQ_LENGTH	$MBS	$BS	$TP	$PP	$TGS	$PERFORMANCE	$MEMUSAGE	$ETPI" |& tee -a out.csv
+else
+        echo "Not the final node; check another the output for another node!"
+        exit 1
+fi
