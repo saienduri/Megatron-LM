@@ -48,7 +48,7 @@ CONTI_PARAMS="${CONTI_PARAMS:-0}"
 OPTIMIZER="${OPTIMIZER:-sgd}"
 TE_FP16="${TE_FP16:-0}"
 NORM="${NORM:-RMSNorm}" # RMSNorm gives errors on H100 LayerNorm
-BASHFILE="${BASHFILE:-train70b_throughput.sh}"
+BASHFILE="${BASHFILE:-train70b_acc_loss.sh}"
 
 LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_bs${BS}_tp${TP}_pp${PP}_optim_${OPTIMIZER}_iter${TOTAL_ITERS}/nocompile${NO_TORCH_COMPILE}_TE_FP16_${TE_FP16}/${TIME_STAMP}"
 mkdir -p $LOG_DIR

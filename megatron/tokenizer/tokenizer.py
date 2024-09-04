@@ -560,7 +560,10 @@ class _HFTokenizer(MegatronTokenizer):
 
     @property
     def vocab_size(self):
-        return self.tokenizer.vocab_size
+        if self.tokenizer.vocab_size>110000:
+            return int(1.003*self.tokenizer.vocab_size)
+        else:
+            return self.tokenizer.vocab_size
 
     @property
     def vocab(self):

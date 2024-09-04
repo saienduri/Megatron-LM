@@ -119,6 +119,7 @@ elif [[ $MODEL_SIZE -eq 8 ]]; then #llama3.1-8B
         SEQ_LENGTH=2048
         MAX_POSITION_EMBEDDINGS=8192
         NUM_KV_HEADS=8 # llama2 70B uses GQA
+        TOKENIZER_MODEL=../checkpoint/llama3-8b
 elif [[ $MODEL_SIZE -eq 13 ]]; then
         HIDDEN_SIZE=5120 # e.g. llama-13b: 5120
         FFN_HIDDEN_SIZE=13824 # e.g. llama-13b: 13824
