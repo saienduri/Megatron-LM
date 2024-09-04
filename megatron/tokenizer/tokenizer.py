@@ -537,7 +537,7 @@ class _HFTokenizer(MegatronTokenizer):
         name = tokenizer_name_or_path
         super().__init__(name)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path,padding_side="right",use_fast=False)
-        
+
         DEFAULT_PAD_TOKEN = "[PAD]"
         DEFAULT_EOS_TOKEN = "</s>"
         DEFAULT_BOS_TOKEN = "<s>"
@@ -558,9 +558,17 @@ class _HFTokenizer(MegatronTokenizer):
         self.encoder = self.tokenizer.get_vocab()
         self.decoder = {v: k for k, v in self.encoder.items()}
 
+    '''
     @property
     def vocab_size(self):
         return self.tokenizer.vocab_size
+    '''
+    @property
+    def vocab_size(self):
+        if self.tokenizer.vocab_size>110000:
+            return int(1.003*self.tokenizer.vocab_size)
+        else:
+            return self.tokenizer.vocab_size
 
     @property
     def vocab(self):

@@ -47,12 +47,17 @@ NNODES="${NNODES:-1}"
 NODE_RANK="${NODE_RANK:-0}"
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
+# 1 ,2 ,4 ,8, nodes (1st protitty)
 #MODEL_SIZE="${MODEL_SIZE:-70}"
 MODEL_SIZE="${MODEL_SIZE:-8}"
-TP="${TP:-8}"
+TP="${TP:-1}" # 1 node
 PP="${PP:-1}"
 MBS="${MBS:-2}"
+#5
+# MBS: micro_sbastch_size ==> BS = num_GPUs * MBS / TP / PP  (int)
 BS="${BS:-8}"
+#80 * (node)
+# BS: batch_szie
 #SEQ_LENGTH="${SEQ_LENGTH:-4096}"
 SEQ_LENGTH="${SEQ_LENGTH:-2048}"
 TOTAL_ITERS="${TOTAL_ITERS:-100000}"
