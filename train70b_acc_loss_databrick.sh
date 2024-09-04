@@ -67,13 +67,15 @@ EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
 
 #CHECKPOINT_PATH=../checkpoint/llama2_70b/megatron
-CHECKPOINT_PATH=/mnt/m2m_nobackup/yushengsu/Meta-Llama-3-8B/original
+#CHECKPOINT_PATH=/mnt/m2m_nobackup/yushengsu/Meta-Llama-3-8B/original
+CHECKPOINT_PATH=/mnt/m2m_nobackup/yushengsu/Meta-Llama-3-8B
 
 DATA_DIR=$EXPERIMENT_DIR/data
 mkdir -p $DATA_DIR
 TRAIN_DATA=/mnt/m2m_nobackup/yushengsu/OpenHermes-2.5/openhermes2_5.jsonl #1001551
 VALID_DATA=/mnt/m2m_nobackup/yushengsu/OpenHermes-2.5/openhermes2_5.jsonl
 
+#??
 TOKENIZER_MODEL=/mnt/m2m_nobackup/yushengsu/Meta-Llama-3-8B
 
 # Prepare the dataset
@@ -128,7 +130,7 @@ elif [[ $MODEL_SIZE -eq 8 ]]; then
         NUM_HEADS=32 # e.g. llama-13b: 40
         SEQ_LENGTH=$SEQ_LENGTH
         MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
-        NUM_KV_HEADS=40 # llama2 70B uses GQA
+        NUM_KV_HEADS=8 # llama2 70B uses GQA
 elif [[ $MODEL_SIZE -eq 13 ]]; then
         # llama-2
         HIDDEN_SIZE=5120 # e.g. llama-13b: 5120
