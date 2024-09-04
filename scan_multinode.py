@@ -14,9 +14,9 @@ parser.add_argument('--num_nodes', type=int, default=4,
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
 parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.143', \
-                                                     '10.11.8.152', '10.11.8.153', \
+                                                     '10.11.8.152', '10.11.8.146', \
                                                      '10.11.8.142', '10.11.8.144', \
-                                                     '10.11.8.145', '10.11.8.146', ],
+                                                     '10.11.8.145', '10.11.8.153', ],
                     help='the IP address for each nodes')
 parser.add_argument('--master_port', type=int, default=23731,
                     help='Port number for Node2Node communication')
