@@ -39,8 +39,8 @@ DEVICES_IDS=`python -c "print(' '.join([str(a) for a in range($GPUS_PER_NODE)]))
 MODEL_SIZE="${MODEL_SIZE:-70}"
 TP="${TP:-8}"
 PP="${PP:-1}"
-MBS="${MBS:-2}"
-BS="${BS:-8}"
+MBS="${MBS:-3}"
+BS="${BS:-24}"
 SEQ_LENGTH="${SEQ_LENGTH:-4096}"
 TOTAL_ITERS="${TOTAL_ITERS:-8}"
 SEQ_PARALLEL="${SEQ_PARALLEL:-1}" 
@@ -48,7 +48,7 @@ CONTI_PARAMS="${CONTI_PARAMS:-0}"
 OPTIMIZER="${OPTIMIZER:-sgd}"
 TE_FP16="${TE_FP16:-0}"
 NORM="${NORM:-RMSNorm}" # RMSNorm gives errors on H100 LayerNorm
-BASHFILE="${BASHFILE:-train70b_acc_loss.sh}"
+BASHFILE="${BASHFILE:-train70b_throughput.sh}"
 
 LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_bs${BS}_tp${TP}_pp${PP}_optim_${OPTIMIZER}_iter${TOTAL_ITERS}/nocompile${NO_TORCH_COMPILE}_TE_FP16_${TE_FP16}/${TIME_STAMP}"
 mkdir -p $LOG_DIR

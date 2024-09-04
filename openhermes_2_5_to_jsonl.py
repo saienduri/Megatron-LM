@@ -1,7 +1,15 @@
 import json
 from pathlib import Path
 from tqdm import tqdm
-FILE = "/dockerx/OpenHermes-2.5/openhermes2_5.json"
+import argparse
+
+parser = argparse.ArgumentParser(description='scan_multi_nodes',
+                                    allow_abbrev=False)
+parser.add_argument('--data_file', type=str, default=None, 
+                    help='the path of data file')
+args = parser.parse_args()
+FILE = args.data_file
+
 OUT_FILE = Path(FILE).with_suffix(".jsonl")
 with open(FILE, "r") as f:
     data = json.load(f)

@@ -111,6 +111,14 @@ if [[ $MODEL_SIZE -eq 7 ]]; then
         SEQ_LENGTH=$SEQ_LENGTH
         MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
         NUM_KV_HEADS=32 # llama2 70B uses GQA
+elif [[ $MODEL_SIZE -eq 8 ]]; then #llama3.1-8B
+        HIDDEN_SIZE=4096 # e.g. llama-13b: 5120
+        FFN_HIDDEN_SIZE=14336 # e.g. llama-13b: 13824
+        NUM_LAYERS=32 # e.g. llama-13b: 40
+        NUM_HEADS=32 # e.g. llama-13b: 40
+        SEQ_LENGTH=2048
+        MAX_POSITION_EMBEDDINGS=8192
+        NUM_KV_HEADS=8 # llama2 70B uses GQA
 elif [[ $MODEL_SIZE -eq 13 ]]; then
         HIDDEN_SIZE=5120 # e.g. llama-13b: 5120
         FFN_HIDDEN_SIZE=13824 # e.g. llama-13b: 13824
@@ -168,9 +176,13 @@ GPT_ARGS="
     --train-iters $TOTAL_ITERS \
     --no-async-tensor-model-parallel-allreduce \
     --bf16 \
-    --no-masked-softmax-fusion
+    --no-masked-softmax-fusion \
 "
     # --no-masked-softmax-fusion \
+
+if [ $MODEL_SIZE -eq 8 ]; then
+GPT_ARGS="$GPT_ARGS --disable-bias-linear"
+fi
 
 TRAIN_ARGS="--lr 1e-4 \
         --min-lr 1e-5 \

@@ -1,8 +1,7 @@
 # How to run
 ## Environment Setup
 ### On MI300X
-Pull the `rocmshared/20240508_2024_0801_exec_dashboard_tuned_csrikris_ll2_train_new_fa2:latest` docker image. 
-If Transformer Engine (TE) is neeeded, you can pull `rocmshared/20240508_2024_0801_exec_dashboard_tuned_csrikris_ll2_train_new_fa2:latest_with_te` docker image
+Pull the `rocm/pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE` docker image. 
 
 
 Example:
@@ -10,22 +9,6 @@ Example:
 </pre>
 
 
-Install the following dependencies:
-<pre>
-pip install datasets nltk
-pip install "numpy==1.22.4"
-pip install matplotlib==3.8
-pip install numba==0.56
-</pre>
-
-[OPTIONAL] This docker have Flash-Attention installed already. If you want to re-install Flash-Attention:
-<pre>
-git clone https://github.com/ROCm/flash-attention.git
-cd flash-attention
-[OPTIONAL] git config --global --add safe.directory $PATH_THIS_REPO
-[OPTIONAL] git config --global --add safe.directory $PATH_THIS_REPO/csrc/flash_attn_rocm/composable_kernel
-python3 setup.py install
-</pre>
 
 
 <!-- ### On H100
@@ -40,14 +23,29 @@ pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 
 ## Running the benchmarking
 Before run the training, we need to adapt the network interface.
-- Currently, we are using `ens51f0np0` in our script [train_llama2_throughput.sh](./train_llama2_throughput.sh), [basetrain70b.sh](./basetrain70b.sh), [basetrain70b_tune.sh](./basetrain70b_tune.sh). 
+- Currently, we are using `ens51f0np0` in lines-{11,12} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
 - [Optional]: for Infini-Band, please configure the `NCCL_IB_HCA` and `NCCL_IB_GID_INDEX` env vars.
 
-### Single node
-Set the parameters in [train_llama2_throughput.sh](./train_llama2_throughput.sh) or in the bash command as follows:
-<pre>
-bash train_llama2_throughput.sh
-</pre>
+### Prepare the dataset:
+Process the dataset file:
+```
+git clone https://huggingface.co/datasets/teknium/OpenHermes-2.5 PATH_TO_DATASET
+python openhermes_2_5_to_jsonl.py --data_file=$PATH_TO_DATASET/openhermes2_5.json
+```
+After processing, there will be a 'openhermes2_5.jsonl' file in PATH_TO_DATASET.
+
+Modify the data path to `$PATH_TO_DATASET/openhermes2_5.jsonl` in lines-{67,68} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
+
+### Prepare the tokenizer:
+Download the correpsonding tokenizer from huggingface. 
+
+For example, for vicuna model, download the `tokenizer.model` and `tokenizer_config.json` from https://huggingface.co/lmsys/vicuna-13b-v1.5/tree/main
+
+Assume the tokenizer is stored at TOKENIZER_PATH
+
+Modify the tokenizer path to `$TOKENIZER_PATH` in lines-70 at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
+
+
 
 ### Single node with performance tuning
 Set the parameters in [tune_basetrain.sh](./tune_basetrain.sh) or in the bash command as follows:
@@ -60,30 +58,23 @@ Download this repo to each of the node
 
 Run exactly the same setup (docker, python-environment) in every node
 
-Set the parameters in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
+Set the parameters in [train70b_acc_loss.sh](./train70b_acc_loss.sh)
 
-For each node, modify the following lines in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
+For each node, modify the following lines in [train70b_acc_loss.sh](./train70b_acc_loss.sh)
 <pre>
- 7: export GLOO_SOCKET_IFNAME=ens21np0 --> to the network interface on the server [can by obtainted by run ifconfig]
- 8: export NCCL_SOCKET_IFNAME=ens21np0 --> to the network interface on the server [can by obtainted by run ifconfig]
-21: export CUDA_DEVICE_MAX_CONNECTIONS=1 --> to the number of nodes
-35: MASTER_ADDR=localhost --> to the IP address of the master node (rank=0)
-36: MASTER_PORT=23731 --> use a free port number
-37: NNODES=1 --> to the number of nodes
-38: NODE_RANK=0 --> to the rank for this server; this is NODE-dependent!
+export GLOO_SOCKET_IFNAME=ens51f0np0 --> to the network interface on the server [can by obtainted by run ifconfig]
+export NCCL_SOCKET_IFNAME=ens51f0np0 --> to the network interface on the server [can by obtainted by run ifconfig]
+MASTER_ADDR=localhost --> to the IP address of the master node (rank=0)
+MASTER_PORT=23731 --> use a free port number
+NNODES=1 --> to the number of nodes
+NODE_RANK=0 --> to the rank for this server; this is NODE-dependent!
 </pre>
 
-[OPTIONAL] you may modify the following lines in [train_llama2_throughput.sh](./train_llama2_throughput.sh)
-<pre>
-5: export GPU_MAX_HW_QUEUES=2
-6: export TORCH_NCCL_HIGH_PRIORITY=1
-</pre>
- > This two lines could hide the communication behind the computation but not very stable yet. 
 
 
 On each node:
 <pre>
-bash train_llama2_throughput.sh
+bash tune_basetrain.sh NO_TORCH_COMPILE=0
 </pre>
 
 
