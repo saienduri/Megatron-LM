@@ -32,7 +32,13 @@ GPUS_PER_NODE=`python3 -c "import torch; print(torch.cuda.device_count())"`
 MASTER_ADDR="${MASTER_ADDR:-localhost}"
 MASTER_PORT="${MASTER_PORT:-23731}"
 NNODES="${NNODES:-1}"
-NODE_RANK="${NODE_RANK:-0}"
+NODE_RANK="${SLURM_NODEID:-0}"
+
+echo "MASTER_ADDR=$MASTER_ADDR"
+echo "MASTER_PORT=$MASTER_PORT"
+echo "NNODES=$NNODES"
+echo "NODE_RANK=$NODE_RANK"
+
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 DEVICES_IDS=`python -c "print(' '.join([str(a) for a in range($GPUS_PER_NODE)]))"`
 
