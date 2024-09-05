@@ -982,7 +982,7 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             trace_handler = trace_time_handler
 
         with profile(
-            schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+            schedule=torch.profiler.schedule(skip_first=1, wait=1, warmup=1, active=2, repeat=1),
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
             profile_memory=True, 
             on_trace_ready=trace_handler,
