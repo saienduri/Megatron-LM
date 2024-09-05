@@ -4,7 +4,7 @@ build
 .coverage_*
 *.egg-info
 *~
-#slurm*
+slurm-*.out
 logs
 .vscode
 checkpoints
