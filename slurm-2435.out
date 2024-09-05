@@ -1,5 +1,0 @@
-Node IP: 10.158.215.179
-NO_TRAINING=0
-experiment/1nodes_rank0_train_8B_mbs5_bs80_tp1_pp1_optim_sgd_iter8/nocompile0_TE_FP16_0/2024-09-04_18-08-08
-Start tuning
-Tuning stopped
