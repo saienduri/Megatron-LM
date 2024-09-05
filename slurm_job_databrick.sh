@@ -35,8 +35,20 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 #apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash run_databrick.sh
 
 
-# NODE_RANK=0 NODE_RANK=1 NODE_RANK=2 NODE_RANK=3
-# nodes=1, nodes=2, nodes=3, nodes=4
-srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port
 
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port
 
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=320 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port
+
+srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=640 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port
+
+#BS:80, num_GPU:8, MBS:5 [node=1]
+#BS:160, num_GPU:16, MBS:5 [node=2]
+#BS:320, num_GPU:32, MBS:5 [node=4]
+#BS:640, num_GPU:64, MBS:5 [node=8]
+
+# MBS: micro_sbastch_size ==> BS % (num_GPUs * MBS / TP / PP) --should be-->  (int)
+# global batch size (80) is not divisible by micro batch size (5) times data parallel size (32)
+
+#Global Batch Size = Micro Batch Size × Number of Pipeline Stages × Number of Data Parallel Replicas.
