@@ -76,7 +76,6 @@ python pytorch_afo_testkit/afo/tools/tuning/tune_from_rocblasbench.py $ROCBLAS_F
 mkdir -p $ROCBLAS_DIR
 mv full_tuned*.csv $ROCBLAS_DIR
 
-
 # =============== search =============== #
 
 rm -f *.csv
