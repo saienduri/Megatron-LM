@@ -9,15 +9,39 @@
 #SBATCH --time=00-10:00:00             #specify time for the job
 #SBATCH --partition=amd-aig
 #SBATCH --account=amd-aig
-#SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes, if you want those specific nodes
+#SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-011
+#008, 009
 
-#########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes, if you want those specific nodes
+######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
+#####SBATCH --nodelist=useocpm2m-401-[013-014] #specify specific nodes (ML Pref)
+##### 8, 9 ---> fail (can get:  nan     275.74285714285713      nan     nan)
+##### 15, 16 ---> fail
+##### 13, 14 ---> ?
+
+##########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref)
+#########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
 
 
 
 
 head_node=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+######
+###
 master_port=$((20000 + $RANDOM % 40000))
+###
+#master_port=51310
+###
+# Function to find an available port
+#find_available_port() {
+#    local port
+#    while true; do
+#        port=$((20000 + RANDOM % 40000))
+#        (echo >/dev/tcp/localhost/$port) >/dev/null 2>&1 || { echo $port; return 0; }
+#    done
+#}
+#master_port=$(find_available_port)
+###
+######
 #echo "Master Address: $master_addr"
 
 head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)

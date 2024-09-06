@@ -335,26 +335,26 @@ if __name__ == "__main__":
 
 
 # echo '============================================================================================================'
-grep -Eo 'throughput per GPU [^|]*' $TRAIN_LOG | sed -E 's/.*throughput per GPU \(TFLOP\/s\/GPU\): ([0-9\.]+).*/\1/' > tmp.txt
-PERFORMANCE=$(python3 mean_log_value.py tmp.txt)
+grep -Eo 'throughput per GPU [^|]*' $TRAIN_LOG | sed -E 's/.*throughput per GPU \(TFLOP\/s\/GPU\): ([0-9\.]+).*/\1/' > tmp_${NODE_RANK}.txt
+PERFORMANCE=$(python3 mean_log_value.py tmp_${NODE_RANK}.txt)
 echo "throughput per GPU: $PERFORMANCE" |& tee -a $TRAIN_LOG
-rm tmp.txt
+rm tmp_${NODE_RANK}.txt
 
 # echo '============================================================================================================'
-grep -Eo 'elapsed time per iteration [^|]*' $TRAIN_LOG | sed -E 's/.*elapsed time per iteration \(ms\): ([0-9\.]+).*/\1/' > tmp.txt
-ETPI=$(python3 mean_log_value.py tmp.txt)
+grep -Eo 'elapsed time per iteration [^|]*' $TRAIN_LOG | sed -E 's/.*elapsed time per iteration \(ms\): ([0-9\.]+).*/\1/' > tmp_${NODE_RANK}.txt
+ETPI=$(python3 mean_log_value.py tmp_${NODE_RANK}.txt)
 echo "elapsed time per iteration: $ETPI" |& tee -a $TRAIN_LOG
 
-TIME_PER_ITER=$(python3 mean_log_value.py tmp.txt 2>/dev/null | awk '{printf "%.6f", $0}')
+TIME_PER_ITER=$(python3 mean_log_value.py tmp_${NODE_RANK}.txt 2>/dev/null | awk '{printf "%.6f", $0}')
 TGS=$(awk -v bs="$BS" -v sl="$SEQ_LENGTH" -v tpi="$TIME_PER_ITER" -v ws="$WORLD_SIZE" 'BEGIN {printf "%.6f", bs * sl * 1000/ (tpi * ws)}')
 echo "tokens/GPU/s: $TGS" |& tee -a $TRAIN_LOG
-rm tmp.txt
+rm tmp_${NODE_RANK}.txt
 
 echo '============================================================================================================'
-grep -Eo 'mem usages: [^|]*' $TRAIN_LOG | sed -E 's/.*mem usages: ([0-9\.]+).*/\1/' > tmp.txt
-MEMUSAGE=$(python3 mean_log_value.py tmp.txt)
+grep -Eo 'mem usages: [^|]*' $TRAIN_LOG | sed -E 's/.*mem usages: ([0-9\.]+).*/\1/' > tmp_${NODE_RANK}.txt
+MEMUSAGE=$(python3 mean_log_value.py tmp_${NODE_RANK}.txt)
 echo "mem usages: $MEMUSAGE" |& tee -a $TRAIN_LOG
-rm tmp.txt
+rm tmp_${NODE_RANK}.txt
 
 
 
