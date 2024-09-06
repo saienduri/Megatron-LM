@@ -55,7 +55,6 @@ echo "NNODES=$NNODES"
 echo "NODE_RANK=$NODE_RANK"
 ################
 
-exit
 
 # 1 ,2 ,4 ,8, nodes (1st protitty)
 #MODEL_SIZE="${MODEL_SIZE:-70}"
