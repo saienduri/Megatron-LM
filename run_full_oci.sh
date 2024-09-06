@@ -11,6 +11,7 @@ while true
 do
   # command_to_run
   # Sleep for 30 minutes
-  sbatch slurm_job_full_del.sh
+  # sbatch slurm_job_full_del.sh
+  sbatch slurm_job_databrick_del.sh
   sleep 2700
 done
