@@ -51,14 +51,14 @@ def generate_command():
             --privileged  -v {args.repo_path_upper}:{args.repo_path_upper}   \
             -v  {args.home_path}/.ssh:/root/.ssh  --shm-size 64G \
             --name {container_name}  {args.docker_image_name} \
-            /bin/bash -c \"cd {args.repo_path} && source install.sh && python scan_multinode.py --torch_profile\""
-        command = f"docker run  --device /dev/dri --device /dev/kfd \
-            --network host --ipc host --group-add video \
-            --cap-add SYS_PTRACE --security-opt seccomp=unconfined \
-            --privileged  -v {args.repo_path_upper}:{args.repo_path_upper}   \
-            -v  {args.home_path}/.ssh:/root/.ssh  --shm-size 64G \
-            --name {container_name}  {args.docker_image_name} \
-            /bin/bash -c \"cd {args.repo_path} && source install.sh && bash tune_basetrain.sh\""
+            /bin/bash -c \"cd {args.repo_path} && source install.sh && python scan_multinode.py --seq_length=2048\""
+        # command = f"docker run  --device /dev/dri --device /dev/kfd \
+        #     --network host --ipc host --group-add video \
+        #     --cap-add SYS_PTRACE --security-opt seccomp=unconfined \
+        #     --privileged  -v {args.repo_path_upper}:{args.repo_path_upper}   \
+        #     -v  {args.home_path}/.ssh:/root/.ssh  --shm-size 64G \
+        #     --name {container_name}  {args.docker_image_name} \
+        #     /bin/bash -c \"cd {args.repo_path} && source install.sh && bash tune_basetrain.sh\""
         multinodes_training = True
         print("Starting Multi-nodes Training ...")
     elif args.task_id == 2:

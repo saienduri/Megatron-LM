@@ -9,20 +9,22 @@ parser = argparse.ArgumentParser(description='scan_multi_nodes',
 
 parser.add_argument('--master_node', action='store_true', default=False,
                     help='Master node or Slave node')
-parser.add_argument('--num_nodes', type=int, default=4,
+parser.add_argument('--num_nodes', type=int, default=2,
                     help='number of nodes')
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
 parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.143', \
-                                                     '10.11.8.152', '10.11.8.146', \
-                                                     '10.11.8.142', '10.11.8.144', \
-                                                     '10.11.8.145', '10.11.8.153', ],
+                                                     '10.11.8.144', '10.11.8.146', \
+                                                     '10.11.8.142', '10.11.8.153', \
+                                                     '10.11.8.145', '10.11.8.152', ],
                     help='the IP address for each nodes')
-parser.add_argument('--master_port', type=int, default=23731,
+parser.add_argument('--master_port', type=int, default=37873,
                     help='Port number for Node2Node communication')
 parser.add_argument('--num_runs', type=int, default=1,
                     help='Number of runs')
 parser.add_argument('--num_iters', type=int, default=20,
+                    help='Number of training iterations per run')
+parser.add_argument('--seq_length', type=int, default=4096,
                     help='Number of training iterations per run')
 parser.add_argument('--torch_compile', default=False,
                     action="store_true", help='using torch compile')
@@ -93,15 +95,14 @@ correct_compile_test=[
 ]
 
 configs_grad_overlap_comm_four_nodes = [
-    #mbs, gbs, tp, pp, profiling, compiling
-    # [4, 4,  8, 1, 1, 0],
-    # [4, 4,  8, 1, 1, 1],
-    [4, 16, 8, 1, 1, 0],
+    # model_size, mbs, grad_accumsteps, tp, pp, profiling, compiling
+    [70,  1,  1,  8,  1,  0,  1],
+    [ 8,  7,  4,  1,  1,  0,  1],
 ]
 
 def read_perf():
-    for mbs, gbs, tp, pp, profiling, compiling in configs_grad_overlap_comm_four_nodes:
-        bs=args.num_nodes * 8 //(tp*pp)*gbs
+    for modelsize, mbs, accm_steps, tp, pp, profiling, compiling in configs_grad_overlap_comm_four_nodes:
+        bs=args.num_nodes * 8 *accm_steps*mbs//(tp*pp)
         train_file_expr=f'./experiment/{args.num_nodes}nodes_rank{args.node_rank}'+\
                         f'_train_70B_mbs{mbs}_bs{bs}_tp{tp}_pp{pp}_optim_sgd_iter{args.num_iters}'+\
                         f'/nocompile0_TE_FP16_0/2024-08-29_*/output_perf.log'
@@ -134,14 +135,16 @@ def master_node():
     os.system('sleep 20')
     MASTER_IP = args.ip_list[0]
     for idx, config in enumerate(configs_grad_overlap_comm_four_nodes):
-        mbs, gbs, tp, pp, profile_tag, compiling_tag = config
+        modelsize, mbs, accum_steps, tp, pp, profile_tag, compiling_tag = config
         #'Micro batch,Global Batch,TP,PP'
         
         
         for node in range(0, args.num_nodes):
             file_name = 'try_two_nodes_{}_{}_{}.sh'.format(args.num_nodes, idx, node)
-            gbs_scale = args.num_nodes * 8 //(tp*pp)
-            configs = ' TP={} PP={} MBS={} BS={} NODE_RANK={} NNODES={} MASTER_PORT={} MASTER_ADDR={} TOTAL_ITERS={}'.format(tp, pp, mbs, gbs*gbs_scale, node, args.num_nodes, args.master_port, args.ip_list[0], args.num_iters)
+            gbs = mbs*accum_steps*args.num_nodes * 8 //(tp*pp)
+            configs = ' TP={} PP={} MBS={} BS={} NODE_RANK={} NNODES={} MASTER_PORT={} MASTER_ADDR={} TOTAL_ITERS={} SEQ_LENGTH={}'.format(\
+                tp, pp, mbs, gbs, node, args.num_nodes, args.master_port, args.ip_list[0], args.num_iters, args.seq_length)
+            configs = configs+' MODEL_SIZE={}'.format(modelsize)
             if args.torch_compile or compiling_tag:
                 configs=configs+ ' NO_TORCH_COMPILE=0'
             if args.torch_profile or profile_tag:
@@ -212,6 +215,7 @@ def main():
     else:
         for i in range(args.num_runs):
             if args.num_nodes==1:
+                args.ip_list[0] = 'localhost'
                 master_node()
 
             elif args.num_nodes>1:
