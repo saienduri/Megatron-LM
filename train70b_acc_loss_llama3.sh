@@ -13,6 +13,7 @@ export GLOO_SOCKET_IFNAME=ens51f0np0
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NCCL_PROTO=Simple
 export RCCL_MSCCL_ENABLE=0
+export TOKENIZERS_PARALLELISM=false
 
 # parsing input arguments
 for ARGUMENT in "$@"

@@ -13,10 +13,10 @@ parser.add_argument('--num_nodes', type=int, default=2,
                     help='number of nodes')
 parser.add_argument('--node_rank', type=int, default=0,
                     help='Index/Rank of the current node')
-parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.143', \
-                                                     '10.11.8.144', '10.11.8.146', \
-                                                     '10.11.8.142', '10.11.8.153', \
-                                                     '10.11.8.145', '10.11.8.152', ],
+parser.add_argument('--ip_list', type=list, default=['10.11.8.151', '10.11.8.152', \
+                                                     '10.11.8.143', '10.11.8.153', \
+                                                     '10.11.8.142', '10.11.8.144', \
+                                                     '10.11.8.145', '10.11.8.146', ],
                     help='the IP address for each nodes')
 parser.add_argument('--master_port', type=int, default=37873,
                     help='Port number for Node2Node communication')
@@ -96,8 +96,10 @@ correct_compile_test=[
 
 configs_grad_overlap_comm_four_nodes = [
     # model_size, mbs, grad_accumsteps, tp, pp, profiling, compiling
-    [70,  1,  1,  8,  1,  0,  1],
-    [ 8,  7,  4,  1,  1,  0,  1],
+    [ 70,  8,  1,  8,  1,  0,  1],
+    [ 70,  8,  8,  8,  1,  0,  1],
+    [  8,  7,  4,  1,  1,  0,  1],
+    [  8,  7,  8,  1,  1,  0,  1],
 ]
 
 def read_perf():

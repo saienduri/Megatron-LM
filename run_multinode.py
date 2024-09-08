@@ -92,7 +92,7 @@ def execute_ssh_command(server):
 def main():
     # Define the number of max workers, could be len(servers) if you want to max parallelism
     all_res = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.num_nodes) as executor:
         # Map the execute_ssh_command to the servers
         results = executor.map(execute_ssh_command, servers)
 
