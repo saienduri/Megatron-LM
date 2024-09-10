@@ -56,6 +56,8 @@ export NCCL_ENABLE_DMABUF_SUPPORT=1
 export NCCL_IB_GID_INDEX=3
 export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
+#export LD_LIBRARY_PATH=/path/to/lib:$LD_LIBRARY_PATH
+
 # train70b_acc_loss_databrick.sh v.s train70b_acc_loss_databrick_test.sh (modified as Jiang push on the github)
 
 
@@ -70,20 +72,25 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
 #[1]
 #!!!!!!!!!!!!!!!!!!!!!
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash  tune_basetrain_databrick.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
 
 
 #[2]
 #!!!!!!!!!!!!!!!!!!!!
-srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
+srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash  tune_basetrain_databrick.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+
 
 
 #[4]
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=320 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=320 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
 
 
 #[8]
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=640 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_test.sh MBS=5 BS=640 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
 
 
 #BS:80, num_GPU:8, MBS: 2 --> 5 --> 10 [node=1] (rest times is accumulation)
