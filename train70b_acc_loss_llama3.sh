@@ -51,7 +51,7 @@ TP="${TP:-8}"
 PP="${PP:-1}"
 MBS="${MBS:-2}"
 BS="${BS:-8}"
-SEQ_LENGTH="${SEQ_LENGTH:-4096}"
+="${SEQ_LENGTH:-4096}"
 TOTAL_ITERS="${TOTAL_ITERS:-100000}"
 SEQ_PARALLEL="${SEQ_PARALLEL:-1}" 
 CONTI_PARAMS="${CONTI_PARAMS:-0}"
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 # fi
 
 
-MAX_POSITION_EMBEDDINGS=8192
+MAX_POSITION_EMBEDDINGS=128000
 
 DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_bs${BS}_tp${TP}_pp${PP}_optim_${OPTIMIZER}_iter${TOTAL_ITERS}/nocompile${NO_TORCH_COMPILE}_TE_FP16_${TE_FP16}/${TIME_STAMP}"
 LOG_DIR="${LOG_DIR:-${DEFAULT_LOG_DIR}}"
@@ -117,8 +117,8 @@ elif [[ $MODEL_SIZE -eq 8 ]]; then #llama3.1-8B
         FFN_HIDDEN_SIZE=14336 # e.g. llama-13b: 13824
         NUM_LAYERS=32 # e.g. llama-13b: 40
         NUM_HEADS=32 # e.g. llama-13b: 40
-        SEQ_LENGTH=2048
         NUM_KV_HEADS=8 # llama2 70B uses GQA
+        SEQ_LENGTH=$SEQ_LENGTH
 elif [[ $MODEL_SIZE -eq 13 ]]; then
         HIDDEN_SIZE=5120 # e.g. llama-13b: 5120
         FFN_HIDDEN_SIZE=13824 # e.g. llama-13b: 13824
@@ -208,7 +208,8 @@ DATA_ARGS="
     --tensorboard-dir $LOG_DIR \
     --log-interval 1 \
     --eval-interval 320000 \
-    --eval-iters 10
+    --eval-iters 10 \
+    --num-workers 16 \
 "
 
 OUTPUT_ARGS="
@@ -274,10 +275,12 @@ fi
 
 if [ "$TE_FP16" -eq 1 ]; then
 EXTRA_ARGS="$EXTRA_ARGS --transformer-impl=transformer_engine \
+    --fp8-format=hybrid \
     --fp8-margin=0 \
     --fp8-interval=1 \
     --fp8-amax-history-len=1024 \
-    --fp8-amax-compute-algo=max
+    --fp8-amax-compute-algo=max \
+    --attention-softmax-in-fp32 \
 "
 fi
 
