@@ -24,7 +24,7 @@ parser.add_argument('--num_runs', type=int, default=1,
                     help='Number of runs')
 parser.add_argument('--num_iters', type=int, default=20,
                     help='Number of training iterations per run')
-parser.add_argument('--seq_length', type=int, default=4096,
+parser.add_argument('--seq_length', type=int, default=128000,
                     help='Number of training iterations per run')
 parser.add_argument('--torch_compile', default=False,
                     action="store_true", help='using torch compile')
