@@ -9,7 +9,9 @@
 #SBATCH --time=00-10:00:00             #specify time for the job
 #SBATCH --partition=amd-aig
 #SBATCH --account=amd-aig
+######SBATCH --nodelist=useocpm2m-401-008,useocpm2m-401-009
 #SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
+#####SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
 #008, 009
 
 ######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
