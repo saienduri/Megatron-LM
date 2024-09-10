@@ -5,7 +5,7 @@ if [ "$answer" = "y" ]; then
     git add --all
     git commit -m "update"
     #git push --all
-    git push -u origin yushengsu-dev-databricks
+    git push -u origin yushengsu-dev-databricks-rocm6.2
     echo "Push executed."
 else
     echo "Push aborted."
