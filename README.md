@@ -23,8 +23,10 @@ pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 
 ## Running the benchmarking
 Before run the training, we need to adapt the network interface.
-- Currently, we are using `ens51f0np0` in lines-{11,12} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
-- [Optional]: for Infini-Band, please configure the `NCCL_IB_HCA` and `NCCL_IB_GID_INDEX` env vars.
+- Currently, we are using network interface `ens51f0np0` in lines-{11,12} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
+- We can reset `ens51f0np0` to the network interface of the used server; `ifconfig` can list all available network interfaces.
+
+- [Optional]: for Infini-Band, please configure the `NCCL_IB_HCA` and `NCCL_IB_GID_INDEX` env vars in lines-{8,9}; if not using it, comment out these two lines
 
 ### Prepare the dataset:
 Process the dataset file:
@@ -34,7 +36,7 @@ python openhermes_2_5_to_jsonl.py --data_file=$PATH_TO_DATASET/openhermes2_5.jso
 ```
 After processing, there will be a 'openhermes2_5.jsonl' file in PATH_TO_DATASET.
 
-Modify the data path to `$PATH_TO_DATASET/openhermes2_5.jsonl` in lines-{67,68} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
+Modify the data path to `$PATH_TO_DATASET/openhermes2_5.jsonl` in lines-{68,69} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
 
 ### Prepare the tokenizer:
 Download the correpsonding tokenizer from huggingface. 
@@ -50,7 +52,7 @@ Modify the tokenizer path to `$TOKENIZER_PATH` in lines-70 at our script [train7
 ### Single node with performance tuning
 Set the parameters in [tune_basetrain.sh](./tune_basetrain.sh) or in the bash command as follows:
 <pre>
-bash tune_basetrain.sh NO_TORCH_COMPILE=0
+bash tune_basetrain.sh NO_TORCH_COMPILE=0 BASHFILE=train70b_acc_loss.sh MODEL_SIZE=70 MBS=4 BS=32 NO_TORCH_COMPILE=0
 </pre>
 
 ### Multiple node

@@ -34,7 +34,7 @@ parser.add_argument('--read_perf', default=False,
                     action="store_true", help='read the perf numbers')
 parser.add_argument('--sync_files', default=False,
                     action="store_true", help='synchronize this file among different nodes')
-parser.add_argument('--main_file', type=str, default='tune_basetrain.sh',
+parser.add_argument('--main_file', type=str, default='train70b_acc_loss_llama3.sh',
                     help='the main script for profiling')
 parser.add_argument('--user_name', type=str, default='amd',
                     help='user name for remote nodes')
@@ -93,13 +93,23 @@ correct_compile_test=[
     [5, 5, 8, 1, 1, 0],
     [6, 6, 8, 1, 1, 0],
 ]
-
+[   [ 70,  8,  8,  8,  1,  0,  0],
+    [ 70,  9,  8,  8,  1,  0,  0],
+    [ 70, 10,  8,  8,  1,  0,  0],
+]
 configs_grad_overlap_comm_four_nodes = [
     # model_size, mbs, grad_accumsteps, tp, pp, profiling, compiling
-    [ 70,  8,  1,  8,  1,  0,  1],
-    [ 70,  8,  8,  8,  1,  0,  1],
-    [  8,  7,  4,  1,  1,  0,  1],
-    [  8,  7,  8,  1,  1,  0,  1],
+    # [ 70,  4,  8,  8,  1,  0,  0],
+    # [ 70,  5,  8,  8,  1,  0,  0],
+    # [ 70,  6,  8,  8,  1,  0,  0],
+    # [  8,  5,  2,  1,  1,  0,  0],
+    # [  8,  7,  4,  1,  1,  0,  0],
+    # [  8,  7,  8,  1,  1,  0,  0],
+    # [ 70,  8,  8,  8,  1,  0,  0],
+    # [ 70,  9,  8,  8,  1,  0,  0],
+    # [ 70, 10,  8,  8,  1,  0,  0],
+    [ 70, 1,  1,  4,  4,  0,  0],
+    [ 70, 1,  2,  8,  4,  0,  0],
 ]
 
 def read_perf():

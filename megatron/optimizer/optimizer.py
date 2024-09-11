@@ -88,6 +88,8 @@ class MegatronOptimizer(ABC):
             is_not_tp_duplicate = tensor_parallel.param_is_not_tensor_parallel_duplicate(param)
             if grad_not_none and is_not_shared and is_not_tp_duplicate:
                 grads_for_norm.append(grad)
+            # print_rank_0(param)
+            # print_rank_0(torch.norm(grad))
 
         return grads_for_norm
 

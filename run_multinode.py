@@ -21,7 +21,7 @@ parser.add_argument('--repo_path_upper', type=str, default='/home/amd/guihong', 
 parser.add_argument('--home_path', type=str, default='/home/amd', #'~/guihong/megatron_lm',
                     help='the path where storing this folder')
 parser.add_argument('--docker_image_name', type=str, 
-                    default='rocm/pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE', #'~/guihong/megatron_lm',
+                    default='rocm/pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP', #'~/guihong/megatron_lm',
                     help='the path where storing this folder')
 args = parser.parse_args()
 
@@ -51,7 +51,7 @@ def generate_command():
             --privileged  -v {args.repo_path_upper}:{args.repo_path_upper}   \
             -v  {args.home_path}/.ssh:/root/.ssh  --shm-size 64G \
             --name {container_name}  {args.docker_image_name} \
-            /bin/bash -c \"cd {args.repo_path} && source install.sh && python scan_multinode.py --seq_length=2048\""
+            /bin/bash -c \"cd {args.repo_path} && source install.sh && python scan_multinode.py --seq_length=128000\""
         # command = f"docker run  --device /dev/dri --device /dev/kfd \
         #     --network host --ipc host --group-add video \
         #     --cap-add SYS_PTRACE --security-opt seccomp=unconfined \
