@@ -43,7 +43,7 @@ Modify the data path to `$PATH_TO_DATASET/openhermes2_5.jsonl` in lines-{68,69} 
 ### Prepare the tokenizer:
 Download the correpsonding tokenizer from huggingface. 
 
-For example, for vicuna model, download the `tokenizer.model` and `tokenizer_config.json` from https://huggingface.co/lmsys/vicuna-13b-v1.5/tree/main
+For example, for llama2-70b model, download the `tokenizer.model` and `tokenizer_config.json` from https://huggingface.co/meta-llama/Llama-2-70b-chat/tree/main
 
 Assume the tokenizer is stored at TOKENIZER_PATH
 
