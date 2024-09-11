@@ -1,14 +1,18 @@
 # How to run
 ## Environment Setup
-### On MI300X
+
+### Docker and library
 Pull the `rocm/pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE` docker image. 
 
-
 Example:
-<pre>docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged    -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --name llama-70b-training-gl  $DOCKER_IMAGE_NAME
+<pre>docker run -it --device /dev/dri --device /dev/kfd --network host --ipc host --group-add video --cap-add SYS_PTRACE --security-opt seccomp=unconfined --privileged    -v  $HOME/.ssh:/root/.ssh  --shm-size 128G --name llama-70b-training-gl  rocm/pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE
 </pre>
 
-
+Install the afo-based gemm tuning librabry
+```
+cd pytorch_afo_testkit
+pip install -e . && cd ..
+```
 
 
 <!-- ### On H100
@@ -21,7 +25,7 @@ pip install ftfy datasets langdetect flash_attn numpy pandas nltk sentencepiece 
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 </pre> -->
 
-## Running the benchmarking
+### Network configuration
 Before run the training, we need to adapt the network interface.
 - Network interface
    - Currently, we are using network interface `ens51f0np0` in lines-{11,12} at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
@@ -49,6 +53,7 @@ Assume the tokenizer is stored at TOKENIZER_PATH
 
 Modify the tokenizer path to `$TOKENIZER_PATH` in lines-70 at our script [train70b_acc_loss.sh](./train70b_acc_loss.sh).
 
+## Running the benchmarking
 
 
 ### Single node with performance tuning
