@@ -35,7 +35,7 @@ Before run the training, we need to adapt the network interface.
    - For multi-node training, we need to configure the `NCCL_IB_HCA` and `NCCL_IB_GID_INDEX` env vars in 
 
 ### Prepare the dataset:
-Process the dataset file:
+Install `git lfs` and process the dataset file:
 ```
 git clone https://huggingface.co/datasets/teknium/OpenHermes-2.5 PATH_TO_DATASET
 python openhermes_2_5_to_jsonl.py --data_file=$PATH_TO_DATASET/openhermes2_5.json
@@ -47,7 +47,7 @@ Modify the data path to `$PATH_TO_DATASET/openhermes2_5.jsonl` in lines-{68,69} 
 ### Prepare the tokenizer:
 Download the correpsonding tokenizer from huggingface. 
 
-For example, for llama2-70b model, download the `tokenizer.model` and `tokenizer_config.json` from https://huggingface.co/meta-llama/Llama-2-70b-chat/tree/main
+For example, for llama2-70b model, download the `tokenizer.model`, `config.json` and `tokenizer_config.json` from [Hugging-face](https://huggingface.co/meta-llama/Llama-2-70b-chat-hf/tree/main)
 
 Assume the tokenizer is stored at TOKENIZER_PATH
 
