@@ -3,13 +3,18 @@
 #NODES=
 
 #SBATCH --job-name=databrick
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --cpus-per-gpu=16
 #SBATCH --gres=gpu:8
 #SBATCH --time=00-10:00:00             #specify time for the job
 #SBATCH --partition=amd-aig
 #SBATCH --account=amd-aig
 #SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
+#########SBATCH --nodelist=useocpm2m-401-008,useocpm2m-401-009
+
+#########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-004,useocpm2m-401-012,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref) + 004+012
+
+#########SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
 
 ########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
 
@@ -53,11 +58,13 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
 
 #[1]
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+#TP=1,2,4,8
+# runing:2, next->4
+srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
 
 
 #[2]
-srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
 
 
 

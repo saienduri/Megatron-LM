@@ -297,6 +297,7 @@ if [ "$CONTI_PARAMS" -eq 1 ]; then
 EXTRA_ARGS="$EXTRA_ARGS --use-contiguous-parameters-in-local-ddp"
 fi
 
+'''
 if [ "$TE_FP16" -eq 1 ]; then
 EXTRA_ARGS="$EXTRA_ARGS --transformer-impl=transformer_engine \
     --fp8-margin=0 \
@@ -305,6 +306,19 @@ EXTRA_ARGS="$EXTRA_ARGS --transformer-impl=transformer_engine \
     --fp8-amax-compute-algo=max
 "
 fi
+'''
+
+if [ "$TE_FP16" -eq 1 ]; then
+EXTRA_ARGS="$EXTRA_ARGS --transformer-impl=transformer_engine \
+    --fp8-format=hybrid \
+    --fp8-margin=0 \
+    --fp8-interval=1 \
+    --fp8-amax-history-len=1024 \
+    --fp8-amax-compute-algo=max \
+    --attention-softmax-in-fp32 \
+"
+fi
+
 
 run_cmd="
     torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \

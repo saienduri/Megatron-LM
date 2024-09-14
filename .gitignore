@@ -11,3 +11,7 @@ checkpoints
 experiment
 data
 out.csv
+
+fp16_tune_logs
+fp8_tune_logs
+pt_logs

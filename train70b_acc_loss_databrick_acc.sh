@@ -9,9 +9,9 @@ export NCCL_CHECKS_DISABLE=1
 export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 export NCCL_IB_GID_INDEX=3
 export NCCL_CROSS_NIC=0
-##export NCCL_SOCKET_IFNAME=ens51f0np0  ##
+##export NCCL_SOCKET_IFNAME=ens51f0np0
 export NCCL_SOCKET_IFNAME=rdma0,rdma1,rdma2,rdma3,rdma4,rdma5,rdma6,rdma7
-#export GLOO_SOCKET_IFNAME=ens51f0np0 ##
+#export GLOO_SOCKET_IFNAME=ens51f0np0
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NCCL_PROTO=Simple
 export RCCL_MSCCL_ENABLE=0
@@ -165,13 +165,12 @@ elif [[ $MODEL_SIZE -eq 20 ]]; then
         SEQ_LENGTH=$SEQ_LENGTH
         MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
 elif [[ $MODEL_SIZE -eq 70 ]]; then
-        # llama-3
-        # 70B --> 2B
-        HIDDEN_SIZE=8192
-        FFN_HIDDEN_SIZE=28672
-        NUM_LAYERS=80
-        NUM_HEADS=64
-        NUM_KV_HEADS=8
+        # llama-2
+        HIDDEN_SIZE=8192 # e.g. llama-13b: 5120
+        FFN_HIDDEN_SIZE=28672 # e.g. llama-13b: 13824
+        NUM_LAYERS=80 # e.g. llama-13b: 40
+        NUM_HEADS=64 # e.g. llama-13b: 40
+        NUM_KV_HEADS=8 # llama2 70B uses GQA
         SEQ_LENGTH=$SEQ_LENGTH
         MAX_POSITION_EMBEDDINGS=$MAX_POSITION_EMBEDDINGS
 elif [[ $MODEL_SIZE -eq 2 ]]; then
