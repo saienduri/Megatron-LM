@@ -2,7 +2,7 @@
 
 #NODES=
 
-#SBATCH --job-name=fp8_tp_pt_databrick
+#SBATCH --job-name=zc_databrick
 #SBATCH --nodes=1
 #SBATCH --cpus-per-gpu=16
 #SBATCH --gres=gpu:8
@@ -10,6 +10,7 @@
 #SBATCH --partition=amd-aig
 #SBATCH --account=amd-aig
 #SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
+#######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-004,useocpm2m-401-012,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref) + 004+012
 
 ######SBATCH --nodelist=useocpm2m-401-008,useocpm2m-401-009
 ######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-004,useocpm2m-401-012,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref) + 004+012
@@ -87,28 +88,32 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 #[1]
 # Refer to here: https://amdcloud.sharepoint.com/:x:/r/sites/AIG/AIMA/_layouts/15/Doc.aspx?sourcedoc=%7B971FAA60-B8DF-4860-A7EA-955538638D41%7D&file=Databricks%20training%20project.xlsx&wdOrigin=TEAMS-MAGLEV.p2p_ns.rwc&action=default&mobileredirect=true
 gobal_batch_size=80
-micro_batch_size=9
-model_size=70
-tp=8 #1(), 2(), 4(), 8 (o)
+micro_batch_size=5
+model_size=8
+tp=1 #1(), 2(), 4(), 8 (o)
 pp=1
-no_torch_compile=1 # (in acc exp is 1), 0 will be faster
+no_torch_compile=0 # (in acc exp is 1), 0 will be faster but acc will ...?
 
 #TP=8 PP=1 (TP>8 will have the bug) --> NCCL problem --> now: TP=1, PP=1
 
 #fp16 --> #TE_FP16=0
-#pre-traing
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick.sh MBS=5 BS=$gobal_batch_size TP=1 PP=1 MODEL_SIZE=3 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10000 TE_FP16=0
+# Test (train70b_acc_loss_databrick_acc.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=0
+
+
 #sft
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=$gobal_batch_size TP=1 PP=1 MODEL_SIZE=3 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10000 TE_FP16=0
+# tune_pt (tune_basetrain_databrick.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=0
+
 
 
 #fp8 --> #TE_FP16=1
-
-# change back to 8b model (tune_basetrain_databrick.sh)
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash tune_basetrain_databrick.sh MBS=$micro_sbastch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1
-
 # Test (train70b_acc_loss_databrick_acc.sh)
-srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash train70b_acc_loss_databrick_acc.sh MBS=$micro_sbastch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash train70b_acc_loss_databrick_acc.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1
+
+# tune_pt (tune_basetrain_databrick.sh)
+srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash tune_basetrain_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1
+
 
 
 
@@ -138,7 +143,7 @@ srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yush
 #BS:448, num_GPU:64, MBS:7 [node=8]
 
 
-# MBS: micro_sbastch_size ==> BS % (num_GPUs * MBS / TP / PP) --should be-->  (int)
+# MBS: micro_batch_size ==> BS % (num_GPUs * MBS / TP / PP) --should be-->  (int)
 # global batch size (80) is not divisible by micro batch size (5) times data parallel size (32)
 
 #Global Batch Size = Micro Batch Size × Number of Pipeline Stages × Number of Data Parallel Replicas.
