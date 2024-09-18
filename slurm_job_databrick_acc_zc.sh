@@ -67,7 +67,7 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
 #export LD_LIBRARY_PATH=/path/to/lib:$LD_LIBRARY_PATH
 
-# train70b_acc_loss_databrick.sh v.s train70b_acc_loss_databrick_test.sh (modified as Jiang push on the github)
+# train_acc_loss_databrick.sh v.s train_acc_loss_databrick_test.sh (modified as Jiang push on the github)
 
 
 # /mnt/m2m_nobackup is the local storage on the nodes
@@ -81,7 +81,7 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
 #[1]
 #!!!!!!!!!!!!!!!!!!!!!
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick_acc.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train_acc_loss_databrick_acc.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
 
 #TP=8, PP=1 --> will have NCCL problem (use this to debug)
 
@@ -97,8 +97,8 @@ no_torch_compile=0 # (in acc exp is 1), 0 will be faster but acc will ...?
 #TP=8 PP=1 (TP>8 will have the bug) --> NCCL problem --> now: TP=1, PP=1
 
 #fp16 --> #TE_FP16=0
-# Test (train70b_acc_loss_databrick_acc.sh)
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train70b_acc_loss_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=0
+# Test (train_acc_loss_databrick_acc.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train_acc_loss_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=0
 
 
 #sft
@@ -108,8 +108,8 @@ no_torch_compile=0 # (in acc exp is 1), 0 will be faster but acc will ...?
 
 
 #fp8 --> #TE_FP16=1
-# Test (train70b_acc_loss_databrick_acc.sh)
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash train70b_acc_loss_databrick_acc.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1
+# Test (train_acc_loss_databrick_acc.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash train_acc_loss_databrick_acc.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1
 
 # tune_pt (tune_basetrain_databrick.sh)
 srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif bash tune_basetrain_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20 TE_FP16=1

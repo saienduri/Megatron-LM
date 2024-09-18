@@ -2,32 +2,57 @@
 
 #NODES=
 
-#SBATCH --job-name=databrick
+#SBATCH --job-name=fp8_tp_pt_databrick
 #SBATCH --nodes=1
 #SBATCH --cpus-per-gpu=16
 #SBATCH --gres=gpu:8
 #SBATCH --time=00-10:00:00             #specify time for the job
 #SBATCH --partition=amd-aig
 #SBATCH --account=amd-aig
-#SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
-#########SBATCH --nodelist=useocpm2m-401-008,useocpm2m-401-009
+#SBATCH --nodelist=useocpm2m-401-004
+######SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
 
-#########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-004,useocpm2m-401-012,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref) + 004+012
-
-#########SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
-
-########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
-
-###########SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
+######SBATCH --nodelist=useocpm2m-401-008,useocpm2m-401-009
+######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-004,useocpm2m-401-012,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref) + 004+012
 
 
+#######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref)
 
-#######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
-#######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes, if you want those specific nodes
+######SBATCH --nodelist=useocpm2m-401-008,useocpm2m-401-009
+######SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
+#####SBATCH --nodelist=useocpm2m-401-004,useocpm2m-401-012
+#008, 009
+
+######SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
+#####SBATCH --nodelist=useocpm2m-401-[013-014] #specify nodes
+##### 8, 9 ---> fail (can get:  nan     275.74285714285713      nan     nan)
+##### 15, 16 ---> fail
+##### 13, 14 ---> ?
+
+##########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-009],useocpm2m-401-011,useocpm2m-401-[013-016] #specify specific nodes (ML Pref)
+#########SBATCH --nodelist=useocpm2m-401-003,useocpm2m-401-[008-011],useocpm2m-401-[013-020],useocpm2m-401-[022-032] #specify specific nodes (LLM pre-training + MLPref)
+
+
 
 
 head_node=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+######
+###
 master_port=$((20000 + $RANDOM % 40000))
+###
+#master_port=51310
+###
+# Function to find an available port
+#find_available_port() {
+#    local port
+#    while true; do
+#        port=$((20000 + RANDOM % 40000))
+#        (echo >/dev/tcp/localhost/$port) >/dev/null 2>&1 || { echo $port; return 0; }
+#    done
+#}
+#master_port=$(find_available_port)
+###
+######
 #echo "Master Address: $master_addr"
 
 head_node_ip=$(srun --nodes=1 --ntasks=1 -w "$head_node" hostname --ip-address)
@@ -40,12 +65,9 @@ export NCCL_ENABLE_DMABUF_SUPPORT=1
 export NCCL_IB_GID_INDEX=3
 export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
-###Note
-# TOTAL_ITERS=10
-# tune_basetrain_databrick.sh v.s train70b_acc_loss_databrick.sh (for test)
-# Node number, BS, MNS
-# NO_TORCH_COMPILE = 0 (for real run) , = 0 (for test run)
+#export LD_LIBRARY_PATH=/path/to/lib:$LD_LIBRARY_PATH
 
+# train_acc_loss_databrick.sh v.s train_acc_loss_databrick_test.sh (modified as Jiang push on the github)
 
 
 # /mnt/m2m_nobackup is the local storage on the nodes
@@ -58,23 +80,82 @@ export NCCL_IB_HCA=mlx5_0,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_7,mlx5_8,mlx5_9
 
 
 #[1]
-#TP=1,2,4,8
-# runing:2, next->4
-srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+#!!!!!!!!!!!!!!!!!!!!!
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash train_acc_loss_databrick_acc.sh MBS=5 BS=80 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=1 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=10
+
+#TP=8, PP=1 --> will have NCCL problem (use this to debug)
+
+#[1]
+# Refer to here: https://amdcloud.sharepoint.com/:x:/r/sites/AIG/AIMA/_layouts/15/Doc.aspx?sourcedoc=%7B971FAA60-B8DF-4860-A7EA-955538638D41%7D&file=Databricks%20training%20project.xlsx&wdOrigin=TEAMS-MAGLEV.p2p_ns.rwc&action=default&mobileredirect=true
+gobal_batch_size=72
+micro_batch_size=9
+model_size=70 # chose llama3-8B or llama3-70B --> need to modify train_acc_loss_databrick.sh
+tp=8 #1(), 2(), 4(), 8 (o)
+pp=1
+no_torch_compile=1 # (in acc exp is 1), 0 will be faster
+total_iters=10
+
+#(1) fp16
+#env="$HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif"
 
 
-#[2]
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=160 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+#(2) fp8
+#env="$HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP.sif"
+
+
+#(3) gqa, fp8
+env="$HOME/apptainer_built_images/rocm_pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_bf16_rtn_TE_GQA.sif"
+
+##################################
+##################################
+
+#TP=8 PP=1 (TP>8 will have the bug) --> NCCL problem --> now: TP=1, PP=1
+#fp16 --> #TE_FP16=0
+
+#tune
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $env bash train_acc_loss_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=$total_iters TE_FP16=0
+
+#train_acc
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $env bash tune_basetrain_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=$total_iters TE_FP16=0
+
+##################################
+##################################
+
+# Use different apptainer
+
+#fp8 --> #TE_FP16=1
+
+# tune (tune_basetrain_databrick.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $env bash tune_basetrain_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=$total_iters TE_FP16=1
+
+# train_acc (train_acc_loss_databrick_acc.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $env bash train_acc_loss_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=$total_iters TE_FP16=1
+
+
+##################################
+##################################
+
+#fp8 --> #TE_FP16=1, GQA
+# tune (tune_basetrain_databrick.sh)
+#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $env bash tune_basetrain_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=$total_iters TE_FP16=1
+
+# train_acc (train_acc_loss_databrick_acc.sh)
+srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $env bash train_acc_loss_databrick.sh MBS=$micro_batch_size BS=$gobal_batch_size TP=$tp PP=$pp MODEL_SIZE=$model_size SEQ_LENGTH=2048 NO_TORCH_COMPILE=$no_torch_compile MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=$total_iters TE_FP16=1
 
 
 
-#[4]
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=320 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
 
 
-# if I want to test, I can chage to --> train70b_acc_loss_databrick.sh, NO_TORCH_COMPILE --> 1
-#[8]
-#srun -l apptainer exec --bind /mnt/m2m_nobackup/yushengsu:/mnt/m2m_nobackup/yushengsu:rw,$HOME:$HOME:rw $HOME/apptainer_built_images/rocm_pytorch_private_exec_dash_pretuned_nightly_inai_FA_ck_v0_1_1_TE.sif bash tune_basetrain_databrick.sh MBS=5 BS=640 TP=1 PP=1 MODEL_SIZE=8 SEQ_LENGTH=2048 NO_TORCH_COMPILE=0 MASTER_ADDR=$head_node_ip NNODES=$SLURM_NNODES MASTER_PORT=$master_port TOTAL_ITERS=20
+
+# FP-8 docker: rocm/pytorch-private:exec_dash_pretuned_nightly_inai_FA_ck_v0.1.1_TE_with_CP
+# ADD: TE_FP16=1
+# run this one: train_acc_loss_databrick.sh
+# NO_TORCH_COMPILE=1
+# llam3 70B --> 2B
+# TOTAL_ITERS=5,000; 10,000
+# TE_FP16 --> mean FP8-GEMM
+# with TP=8 PP=1
+#2k sequence length
 
 
 

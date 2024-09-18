@@ -1,0 +1,10 @@
+1. train70b_acc_loss_databrick.sh
+    - check the checkpoint name
+
+2. tune_basetrain_databrick.sh
+    - check whether use the coresponding `train*b_acc_loss_databrick.sh`
+
+3. Slurm
+    -   node=
+    -   TE_FP=
+    -   NO_TROCH_COMPILE=
