@@ -1156,13 +1156,30 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             update_num_microbatches(args.consumed_train_samples, consistency_check=True)
 
             args.curr_iteration = iteration
-            loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
-                train_step(forward_step_func,
-                        train_data_iterator,
-                        model,
-                        optimizer,
-                        opt_param_scheduler,
-                        config)
+            from rpdTracerControl import rpdTracerControl
+            rpdTracerControl.setFilename(name = "trace.rpd", append=True)
+            profile_rpd = rpdTracerControl()
+            if iteration == 3 or iteration == 4:
+                if iteration == 3:
+                    profile_rpd.start()
+                with torch.autograd.profiler.emit_nvtx():
+                    loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
+                        train_step(forward_step_func,
+                                train_data_iterator,
+                                model,
+                                optimizer,
+                                opt_param_scheduler,
+                                config)
+                if iteration == 4:
+                    profile_rpd.stop()
+            else:
+                loss_dict, skipped_iter, grad_norm, num_zeros_in_grad = \
+                    train_step(forward_step_func,
+                            train_data_iterator,
+                            model,
+                            optimizer,
+                            opt_param_scheduler,
+                            config)
             iteration += 1
             batch_size = mpu.get_data_parallel_world_size() * \
                         args.micro_batch_size * \
