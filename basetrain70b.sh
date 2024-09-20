@@ -10,6 +10,8 @@ export NCCL_IB_GID_INDEX=3
 export NCCL_CROSS_NIC=0
 export NCCL_SOCKET_IFNAME=ens14np0
 export NCCL_PROTO=Simple
+export AMD_LOG_LEVEL=3
+export PYTHON_EXEC=/var/lib/jenkins/Megatron-LM/gdb_run
 
 # parsing input arguments
 for ARGUMENT in "$@"
@@ -249,6 +251,7 @@ EXTRA_ARGS="$EXTRA_ARGS --transformer-impl=transformer_engine \
 "
 fi
 
+    #gdb --command=autogdb --args python -m torch.distributed.run $DISTRIBUTED_ARGS pretrain_gpt.py \
 run_cmd="
     torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
         $GPT_ARGS \

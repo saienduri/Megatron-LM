@@ -1,0 +1,28 @@
+set pagination off
+set logging file gdb.output
+set logging on
+set charset ISO-8859-1
+
+# Set breakpoints on future loads
+set breakpoint pending on
+# break on STDERR
+break write if 2 == $rdi
+    command 1
+
+    # break if print contains string
+    # if strstr()((char*)($rsi), "hipEventSynchronize") != 0
+    #if strstr((char*)($rsi), "hipEventSynchronize") != 0
+    #if __strcmp_sse2_unaligned((char*)($rsi), "hipEventSynchronize") != 0
+    if $_regex((char*)($rsi), ".*hipEventSynchronize.*") != 0
+        # do a backtrace
+        backtrace
+        continue
+    end
+end
+
+run
+
+set logging off
+quit
+## $rdi == 1 => stdout; $rdi == 2 => stderr
+## Run the command AMD_LOG_LEVEL=3 gdb --command=autogdb ./simpleAdd
