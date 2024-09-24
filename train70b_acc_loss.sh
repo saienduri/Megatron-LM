@@ -62,13 +62,13 @@ TE_FP16="${TE_FP16:-0}"
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
 
-CHECKPOINT_PATH=../checkpoint/llama2_70b/megatron
+CHECKPOINT_PATH="${CHECKPOINT_PATH:-../checkpoint/llama2_70b/megatron}"
 DATA_DIR=$EXPERIMENT_DIR/data
 mkdir -p $DATA_DIR
-TRAIN_DATA=../data/openhermes-2.5/openhermes2_5.jsonl #1001551
-VALID_DATA=../data/openhermes-2.5/openhermes2_5.jsonl
+TRAIN_DATA="${TRAIN_DATA:-../data/openhermes-2.5/openhermes2_5.jsonl}" #1001551
+VALID_DATA="${VALID_DATA:-../data/openhermes-2.5/openhermes2_5.jsonl}"
 
-TOKENIZER_MODEL=../checkpoint/llama2_70b/hf
+TOKENIZER_MODEL="${TOKENIZER_MODEL:-../checkpoint/llama2_70b/hf}"
 
 # Prepare the dataset
 echo 'import argparse
@@ -192,7 +192,7 @@ TRAIN_ARGS="--lr 1e-4 \
         --lr-decay-style cosine \
         --weight-decay 1.0e-1 \
         --clip-grad 1.0 \
-        --optimizer sgd \
+        --optimizer $OPTIMIZER \
 "
         # --lr-warmup-fraction .001 \
         # --adam-beta1 0.9 \
