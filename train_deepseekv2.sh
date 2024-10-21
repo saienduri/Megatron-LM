@@ -50,7 +50,7 @@ if __name__ == "__main__":
     out_dir.mkdir(exist_ok=True, parents=True)
     if not os.path.exists(out_dir / "bookcorpus_megatron.json"):
 
-      dataset = load_dataset("bookcorpus", split="train")
+      dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split='train')
       dataset.to_json(out_dir / "bookcorpus_megatron.json")' > prepare_bookcorpus_megatron_dataset.py
 
 # check tokenizer in preprocess_data.py
@@ -185,7 +185,7 @@ run_cmd="torchrun $DISTRIBUTED_ARGS \
        --max-position-embeddings $MAX_POSITION_EMBEDDINGS \
        --train-iters $TRAIN_STEPS \
        --save $CHECKPOINT_PATH \
-       --load $MODEL_NAME \
+       --tokenizer_model $MODEL_NAME \
        --data-path $DATASET \
        --data-impl mmap \
        --tokenizer-type DeepSeekV2Tokenizer \

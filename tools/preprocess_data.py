@@ -270,7 +270,8 @@ def check_files_exist(in_ss_out_names, key, num_partitions):
 
 def main():
     args = get_args()
-
+    print(args)
+    print()
     if args.split_sentences:
         if nltk_available:
             nltk.download("punkt", quiet=True, download_dir=os.environ.get("NLTK_DATA"))

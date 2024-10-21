@@ -66,7 +66,7 @@ def build_tokenizer(args, **kwargs):
         tokenizer = _NullTokenizer(args.vocab_size)
 
     elif args.tokenizer_type == 'DeepSeekV2Tokenizer':
-        tokenizer = _DeepSeekV2Tokenizer(args.load)
+        tokenizer = _DeepSeekV2Tokenizer(args.tokenizer_model)
         args.padded_vocab_size = tokenizer.vocab_size
 
     else:
