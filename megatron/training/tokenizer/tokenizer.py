@@ -16,6 +16,12 @@ from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
 from .bert_tokenization import FullTokenizer as FullBertTokenizer
 from .gpt2_tokenization import GPT2Tokenizer
 
+_GLOBAL_TOKENIZER = None
+
+def get_tokenizer():
+    """Return tokenizer."""
+    return _GLOBAL_TOKENIZER
+
 
 def build_tokenizer(args, **kwargs):
     """Initialize tokenizer."""

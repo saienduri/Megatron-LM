@@ -1,4 +1,4 @@
-# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+# From PAI 
 """Pretrain GPT."""
 
 import os
@@ -28,17 +28,16 @@ from megatron.training.utils import (
 )
 
 
-from megatron_patch.arguments import get_patch_args
-from megatron_patch.tokenizer import build_tokenizer, get_tokenizer
-from megatron_patch.data import build_pretrain_dataset_from_original
-from megatron_patch.data.utils import get_batch_on_this_tp_rank_original, get_batch_on_this_tp_rank_idxmap_sft
+from megatron.training.arguments import get_patch_args
+from megatron.training.tokenizer import build_tokenizer, get_tokenizer
+from megatron.training.utils import get_batch_on_this_tp_rank_original, get_batch_on_this_tp_rank_idxmap_sft
 
 
-from megatron_patch.model.deepseek_v2.layer_specs import (
+from megatron.core.models.deepseekv2.layer_specs import (
     get_gpt_layer_with_transformer_engine_spec,
 )
-from megatron_patch.model.deepseek_v2.model import GPTModel
-from megatron_patch.model.deepseek_v2.transformer_config import DeepSeekV2TransformerConfig
+from megatron.core.models.deepseekv2.model import GPTModel
+from megatron.core.models.deepseekv2.transformer_config import DeepSeekV2TransformerConfig
 
 
 
@@ -225,27 +224,24 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
         train_val_test_num_samples : A list containing the number of samples in train test and validation.
     """
     args = get_args()
+
+    config = core_gpt_dataset_config_from_args(args)
+
+    if args.mock_data:
+        dataset_type = MockGPTDataset
+    else:
+        dataset_type = GPTDataset
+
     print_rank_0("> building train, validation, and test datasets for GPT ...")
 
-    if "-Raw" in args.dataset:
-        train_ds, valid_ds, test_ds = build_pretrain_dataset_from_original(args.dataset)
-    else:
-        config = core_gpt_dataset_config_from_args(args)
+    train_ds, valid_ds, test_ds = BlendedMegatronDatasetBuilder(
+        dataset_type,
+        train_val_test_num_samples,
+        is_dataset_built_on_rank,
+        config
+    ).build()
 
-        # NOTE: in preparation scripts, the sequence is collect into (seq, labels)
-        # therefore we need to double the seqlen
-        if args.train_mode != "pretrain":
-            config.sequence_length = config.sequence_length * 2
-
-        if config.mock:
-            dataset_type = MockGPTDataset
-        else:
-            dataset_type = GPTDataset
-        train_ds, valid_ds, test_ds = BlendedMegatronDatasetBuilder(
-            dataset_type, train_val_test_num_samples, is_dataset_built_on_rank, config
-        ).build()
-
-        print_rank_0("> finished creating GPT datasets ...")
+    print_rank_0("> finished creating GPT datasets ...")
 
     return train_ds, valid_ds, test_ds
 
