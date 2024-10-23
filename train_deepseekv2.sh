@@ -65,13 +65,11 @@ set -e
 
 MEGATRON_PATH="$( cd "$( dirname "$0" )" && pwd )"
 echo $MEGATRON_PATH #/workspace/Pai-Megatron-Patch-rocm-finetune   /
-export PYTHONPATH=$PYTHONPATH:${MEGATRON_PATH}:${MEGATRON_PATH}/Megatron-LM-240405
-export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 ENV=dsw
 
 if [ $ENV = dsw ]; then
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 MASTER_ADDR=localhost
 MASTER_PORT=$(shuf -n 1 -i 10000-65535)
 NNODES=1

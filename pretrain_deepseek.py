@@ -16,6 +16,7 @@ from megatron.core.datasets.gpt_dataset import (
     GPTDatasetConfig,
     MockGPTDataset,
 )
+import megatron.legacy.model
 from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.core.datasets.utils import get_blend_from_list
 from megatron.core.enums import ModelType
@@ -33,9 +34,10 @@ from megatron.training.tokenizer import build_tokenizer, get_tokenizer
 from megatron.training.utils import get_batch_on_this_tp_rank_original, get_batch_on_this_tp_rank_idxmap_sft
 
 
-from megatron.core.models.deepseekv2.layer_specs import (
-    get_gpt_layer_with_transformer_engine_spec,
-)
+# from megatron.core.models.deepseekv2.layer_specs import (
+#     get_gpt_layer_with_transformer_engine_spec,
+# )
+from megatron.core.models.deepseekv2.layer_specs import get_gpt_layer_with_local_spec
 from megatron.core.models.deepseekv2.model import GPTModel
 from megatron.core.models.deepseekv2.transformer_config import DeepSeekV2TransformerConfig
 
@@ -51,31 +53,39 @@ def model_provider(
     args = get_args()
     build_tokenizer(args)
     config = core_transformer_config_from_args(args, DeepSeekV2TransformerConfig)
-    use_te = args.transformer_impl == "transformer_engine"
 
-    if use_te:
-        print_rank_0("building deepseek_v2 model in TE...")
-        transformer_layer_spec = get_gpt_layer_with_transformer_engine_spec(
-            args.num_experts, args.moe_grouped_gemm, args.qk_layernorm
+    # if use_te:
+    if args.use_mcore_models:
+        print_rank_0("building deepseek_v2 model ...")
+        # transformer_layer_spec = get_gpt_layer_with_transformer_engine_spec(
+        #     args.num_experts, args.moe_grouped_gemm, args.qk_layernorm
+        # )
+        transformer_layer_spec = get_gpt_layer_with_local_spec(args.num_experts, args.moe_grouped_gemm, qk_layernorm=True)
+        model = GPTModel(
+            config=config,
+            transformer_layer_spec=transformer_layer_spec,
+            vocab_size=args.padded_vocab_size,
+            max_sequence_length=args.max_position_embeddings,
+            pre_process=pre_process,
+            post_process=post_process,
+            fp16_lm_cross_entropy=args.fp16_lm_cross_entropy,
+            parallel_output=True,
+            share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights,
+            position_embedding_type=args.position_embedding_type,
+            rotary_percent=args.rotary_percent,
+            rotary_base=args.rotary_base,
+            seq_len_interpolation_factor=args.rotary_seq_len_interpolation_factor
         )
     else:
-        raise ValueError("Current only support TE")
+        assert(args.context_parallel_size == 1), "Context parallelism is only supported with Megatron Core!"
 
-    model = GPTModel(
-        config=config,
-        transformer_layer_spec=transformer_layer_spec,
-        vocab_size=args.padded_vocab_size,
-        max_sequence_length=args.max_position_embeddings,
-        pre_process=pre_process,
-        post_process=post_process,
-        fp16_lm_cross_entropy=args.fp16_lm_cross_entropy,
-        parallel_output=True,
-        share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights,
-        position_embedding_type=args.position_embedding_type,
-        rotary_percent=args.rotary_percent,
-        rotary_base=args.rotary_base,
-        seq_len_interpolation_factor=args.rotary_seq_len_interpolation_factor,
-    )
+        model = megatron.legacy.model.GPTModel(
+            config,
+            num_tokentypes=0,
+            parallel_output=True,
+            pre_process=pre_process,
+            post_process=post_process
+        )
 
     return model
 
