@@ -985,6 +985,8 @@ def _add_logging_args(parser):
                        'flush to disk.')
     group.add_argument('--log-timers-to-tensorboard', action='store_true',
                        help='If set, write timers to tensorboard.')
+    group.add_argument('--log-batch-size-to-tensorboard', action='store_true',
+                       help='If set, write batch-size to tensorboard.')
     group.add_argument('--no-log-loss-scale-to-tensorboard',
                        action='store_false',
                        help='Disable loss-scale logging to tensorboard.',
@@ -1974,12 +1976,12 @@ def get_patch_args(parser):
             help="Base to use for rotary positional embeddings, default 10000",
         )
 
-    group.add_argument(
-        "--local-rank",
-        type=int,
-        default=None,
-        help="local rank passed from distributed launcher",
-    )
+    #group.add_argument(
+    #    "--local-rank",
+    #    type=int,
+    #    default=None,
+    #    help="local rank passed from distributed launcher",
+    #)
 
     group.add_argument("--n-head-kv", type=int, default=None, help="n-head-kv")
 
