@@ -16,7 +16,7 @@ from megatron.core.datasets.gpt_dataset import (
     GPTDatasetConfig,
     MockGPTDataset,
 )
-import megatron.legacy.model
+from megatron.legacy.model import GPTModel
 from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.core.datasets.utils import get_blend_from_list
 from megatron.core.enums import ModelType
@@ -79,7 +79,7 @@ def model_provider(
     else:
         assert(args.context_parallel_size == 1), "Context parallelism is only supported with Megatron Core!"
 
-        model = megatron.legacy.model.GPTModel(
+        model = GPTModel(
             config,
             num_tokentypes=0,
             parallel_output=True,

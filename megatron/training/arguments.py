@@ -19,7 +19,6 @@ from megatron.core.models.retro.utils import (
 )
 from megatron.core.transformer import TransformerConfig
 from megatron.training.activations import squared_relu
-from megatron.training.utils import update_use_dist_ckpt
 
 
 def parse_args(extra_args_provider=None, ignore_unknown_args=False):
@@ -154,62 +153,50 @@ def load_retro_args(args):
 
 def validate_args(args, defaults={}):
 
-    # Temporary
-    assert args.non_persistent_ckpt_type in ['global', None], \
-        'Currently only global checkpoints are supported'
-
     # Load saved args from Retro (if applicable).
     load_retro_args(args)
 
-    # Set args.use_dist_ckpt from args.ckpt_format.
-    update_use_dist_ckpt(args)
-
-    if args.encoder_tensor_model_parallel_size > 0:
-        assert args.encoder_pipeline_model_parallel_size > 0, "encoder_pipeline_model_parallel_size must be defined."
-        assert args.num_attention_heads % args.encoder_tensor_model_parallel_size == 0
-        assert args.encoder_tensor_model_parallel_size <= args.tensor_model_parallel_size, "We do not support encoders with more TP than the decoder."
-
-    if args.encoder_pipeline_model_parallel_size > 0 and args.encoder_tensor_model_parallel_size == 0:
-        args.encoder_tensor_model_parallel_size = args.tensor_model_parallel_size
-
-    encoder_model_size = args.encoder_tensor_model_parallel_size * args.encoder_pipeline_model_parallel_size * args.context_parallel_size
-    decoder_model_size = args.tensor_model_parallel_size * args.pipeline_model_parallel_size * args.context_parallel_size
-    total_model_size = encoder_model_size + decoder_model_size
-
-    # Total model size.
-    assert args.world_size % total_model_size == 0, (
-        f"world size ({args.world_size}) is not divisible by total_model_size ({encoder_model_size=} + {decoder_model_size=})"
-    )
+    # Tensor model parallel size.
+    args.tensor_model_parallel_size = min(
+        args.tensor_model_parallel_size, args.world_size)
+    assert args.world_size % args.tensor_model_parallel_size == 0, 'world size'\
+        ' ({}) is not divisible by tensor model parallel size ({})'.format(
+            args.world_size, args.tensor_model_parallel_size)
 
     # Pipeline model parallel size.
+    args.pipeline_model_parallel_size = min(
+        args.pipeline_model_parallel_size,
+        (args.world_size // args.tensor_model_parallel_size))
     args.transformer_pipeline_model_parallel_size = (
         args.pipeline_model_parallel_size - 1
         if args.standalone_embedding_stage else
         args.pipeline_model_parallel_size
     )
 
-    args.data_parallel_size = args.world_size // total_model_size
-
     # Checks.
+    model_parallel_size = args.pipeline_model_parallel_size * \
+                          args.tensor_model_parallel_size
+    assert args.world_size % (model_parallel_size * args.context_parallel_size) == 0, \
+        'world size ({}) is not divisible by tensor parallel size ({}) times ' \
+        'pipeline parallel size ({}) times context parallel size ({})'.format(
+        args.world_size, args.tensor_model_parallel_size,
+        args.pipeline_model_parallel_size, args.context_parallel_size)
+    args.data_parallel_size = args.world_size // (model_parallel_size * args.context_parallel_size)
     if args.rank == 0:
         print('using world size: {}, data-parallel size: {}, '
-              'context-parallel size: {}, '
+              'context-parallel size: {} '
               'tensor-model-parallel size: {}, '
-              'encoder-tensor-model-parallel size: {}, '
-              'pipeline-model-parallel size: {}, '
-              'encoder-pipeline-model-parallel size: {}'.format(
+              'pipeline-model-parallel size: {} '.format(
                   args.world_size, args.data_parallel_size,
                   args.context_parallel_size,
                   args.tensor_model_parallel_size,
-                  args.encoder_tensor_model_parallel_size,
-                  args.pipeline_model_parallel_size,
-                  args.encoder_pipeline_model_parallel_size), flush=True)
-
-    # backwards compatibility.
-    if args.pipeline_model_parallel_split_rank is not None:
-        args.encoder_pipeline_model_parallel_size = args.pipeline_model_parallel_split_rank
-        args.pipeline_model_parallel_size -= args.encoder_pipeline_model_parallel_size
-        assert args.pipeline_model_parallel_size > 0
+                  args.pipeline_model_parallel_size), flush=True)
+    if args.pipeline_model_parallel_size > 1:
+        if args.pipeline_model_parallel_split_rank is not None:
+            assert args.pipeline_model_parallel_split_rank < \
+                    args.pipeline_model_parallel_size, 'split rank needs'\
+                    ' to be less than pipeline model parallel size ({})'.format(
+                            args.pipeline_model_parallel_size)
 
     if args.tp_comm_overlap:
         assert args.sequence_parallel == True, 'Tensor parallel communication/GEMM overlap can happen only when sequence parallelism is enabled'
@@ -250,13 +237,6 @@ def validate_args(args, defaults={}):
         else:
             setattr(args, key, defaults[key])
 
-    if args.data_path is not None and args.split is None:
-        legacy_default_split_value = '969, 30, 1'
-        if args.rank == 0:
-            print('WARNING: Please specify --split when using --data-path. Using legacy default value '
-                  f'of "{legacy_default_split_value}"')
-        args.split = legacy_default_split_value
-
     # Batch size.
     assert args.micro_batch_size is not None
     assert args.micro_batch_size > 0
@@ -267,15 +247,9 @@ def validate_args(args, defaults={}):
                 args.global_batch_size), flush=True)
     assert args.global_batch_size > 0
     if args.num_layers_per_virtual_pipeline_stage is not None:
-        if args.overlap_p2p_comm:
-            assert args.pipeline_model_parallel_size > 1, \
-                'when interleaved schedule is used, pipeline-model-parallel size '\
-                'should be greater than 1'
-        else:
-            assert args.pipeline_model_parallel_size > 2, \
-                'when interleaved schedule is used and p2p communication overlap is disabled, '\
-                'pipeline-model-parallel size should be greater than 2 to avoid having multiple '\
-                'p2p sends and recvs between same 2 ranks per communication batch'
+        assert args.pipeline_model_parallel_size > 2, \
+            'pipeline-model-parallel size should be greater than 2 with ' \
+            'interleaved schedule'
         assert args.num_layers % args.transformer_pipeline_model_parallel_size == 0, \
             'number of layers should be divisible by the pipeline parallel size'
         num_layers_per_pipeline_stage = args.num_layers // args.transformer_pipeline_model_parallel_size
@@ -287,33 +261,17 @@ def validate_args(args, defaults={}):
         args.virtual_pipeline_model_parallel_size = None
         # Overlap P2P communication is disabled if not using the interleaved schedule.
         args.overlap_p2p_comm = False
-        args.align_param_gather = False
         if args.rank == 0:
-            print('WARNING: Setting args.overlap_p2p_comm and args.align_param_gather to False '
-                  'since non-interleaved schedule does not support overlapping p2p communication '
-                  'and aligned param AG')
+            print('WARNING: Setting args.overlap_p2p_comm to False since non-interleaved '
+                  'schedule does not support overlapping p2p communication')
 
     if args.overlap_param_gather:
         assert args.use_distributed_optimizer, \
             '--overlap-param-gather only supported with distributed optimizer'
         assert args.overlap_grad_reduce, \
-            'Must use --overlap-param-gather with --overlap-grad-reduce'
-        assert not args.use_legacy_models, \
+            '--overlap-grad-reduce should be turned on when using --overlap-param-gather'
+        assert args.use_mcore_models, \
             '--overlap-param-gather only supported with MCore models'
-
-    if args.overlap_param_gather_with_optimizer_step:
-        assert args.use_distributed_optimizer, \
-            '--overlap-param-gather-with-optimizer-step only supported with distributed optimizer'
-        assert args.overlap_param_gather, \
-            'Must use --overlap-param-gather-with-optimizer-step with --overlap-param-gather'
-        assert args.virtual_pipeline_model_parallel_size is not None, \
-            '--overlap-param-gather-with-optimizer-step only supported with interleaved pipeline parallelism'
-        assert not args.use_dist_ckpt, \
-            '--overlap-param-gather-with-optimizer-step not supported with distributed checkpointing yet'
-
-    if args.fp8_param_gather:
-        assert args.use_distributed_optimizer, \
-            '--fp8-param-gather only supported with distributed optimizer'
 
     # Parameters dtype.
     args.params_dtype = torch.float
@@ -345,12 +303,8 @@ def validate_args(args, defaults={}):
     if args.dataloader_type is None:
         args.dataloader_type = 'single'
 
-    # data
-    assert args.num_dataset_builder_threads > 0
-
     # Consumed tokens.
     args.consumed_train_samples = 0
-    args.skipped_train_samples = 0
     args.consumed_valid_samples = 0
 
     # Support for variable sequence lengths across batches/microbatches.
@@ -421,11 +375,6 @@ def validate_args(args, defaults={}):
     if args.kv_channels is None:
         assert args.hidden_size % args.num_attention_heads == 0
         args.kv_channels = args.hidden_size // args.num_attention_heads
-
-    if args.seq_length is not None and args.context_parallel_size > 1:
-        assert args.seq_length % (args.context_parallel_size * 2) == 0, \
-            'seq-length should be a multiple of 2 * context-parallel-size ' \
-            'if context-parallel-size > 1.'
 
     if args.seq_length is not None:
         assert args.encoder_seq_length is None
@@ -535,16 +484,16 @@ def validate_args(args, defaults={}):
             "retro currently does not support pipeline parallelism."
 
     if args.decoupled_lr is not None or args.decoupled_min_lr is not None:
-        assert not args.use_legacy_models, \
-            '--decoupled-lr and --decoupled-min-lr is not supported in legacy models.'
+        assert args.use_mcore_models, \
+            '--decoupled-lr and --decoupled-min-lr only supported by Megatron Core, please add --use-mcore-models.'
 
     # Legacy RoPE arguments
     if args.use_rotary_position_embeddings:
         args.position_embedding_type = 'rope'
     if args.rotary_interleaved and args.apply_rope_fusion:
         raise RuntimeError('--rotary-interleaved does not work with rope_fusion.')
-    if args.rotary_interleaved and args.use_legacy_models:
-        raise RuntimeError('--rotary-interleaved is not supported in legacy models.')
+    if args.rotary_interleaved and not args.use_mcore_models:
+        raise RuntimeError('--rotary-interleaved only support Megatron Core, please add --use-mcore-models.')
 
     # Would just need to add 'NoPE' as a position_embedding_type to support this, but for now
     # don't allow it to keep things simple
@@ -552,14 +501,11 @@ def validate_args(args, defaults={}):
         raise RuntimeError('--no-position-embedding is deprecated, use --position-embedding-type')
 
     # MoE Spec check
-    if args.num_experts == 0:
-        args.num_experts = None
     if args.num_experts is not None:
         assert args.spec is None, "Model Spec must be None when using MoEs"
-
-    # Context parallel
-    if args.context_parallel_size > 1:
-        assert not args.use_legacy_models, "Context parallelism is not supported in legacy models."
+        if args.tensor_model_parallel_size > 1:
+            assert args.sequence_parallel, \
+                "When using MoE and tensor parallelism, sequence parallelism must be used."
 
     # Expert parallelism check
     if args.expert_model_parallel_size  > 1:
@@ -570,63 +516,8 @@ def validate_args(args, defaults={}):
             "Expert parallelism is not supported with fp16 training."
 
     # Distributed checkpointing checks
-    if args.use_dist_ckpt and args.use_legacy_models:
-        raise RuntimeError('--use-dist-ckpt is not supported in legacy models.')
-
-    # Data blend checks
-    assert args.mock_data + \
-           bool(args.data_path) + \
-           any([args.train_data_path, args.valid_data_path, args.test_data_path]) \
-           <= 1, "A single data source must be provided in training mode, else None"
-
-    if args.use_tp_pp_dp_mapping:
-        assert args.context_parallel_size * args.expert_model_parallel_size <= 1, \
-            "context_parallel and expert_model_parallel can't be used with tp-pp-dp mapping."
-
-    # Deterministic mode
-    if args.deterministic_mode:
-        assert not args.use_flash_attn, "Flash attention can not be used in deterministic mode."
-        assert not args.cross_entropy_loss_fusion, "Cross Entropy Fusion is currently not deterministic."
-
-        all_reduce_choices = ["Tree", "Ring", "CollnetDirect", "CollnetChain", "^NVLS"]
-        assert os.getenv("NCCL_ALGO", -1) != -1 and os.getenv("NCCL_ALGO") in all_reduce_choices, \
-            f"NCCL_ALGO must be one of {all_reduce_choices}."
-
-        torch.use_deterministic_algorithms(True)
-
-    # Update the printed args to reflect that `apply_query_key_layer_scaling` also controls `attention_softmax_in_fp32`
-    if args.apply_query_key_layer_scaling:
-        args.attention_softmax_in_fp32 = True
-
-    # Checkpointing
-    if args.ckpt_fully_parallel_save_deprecated and args.rank == 0:
-        print('--ckpt-fully-parallel-save flag is deprecated and has no effect.'
-              ' Use --no-ckpt-fully-parallel-save to disable parallel save.')
-    if (
-        args.use_dist_ckpt
-        and not args.ckpt_fully_parallel_save
-        and args.use_distributed_optimizer
-        and args.rank == 0
-    ):
-        print('Warning: With non-parallel ckpt save and DistributedOptimizer,'
-              ' it will be impossible to resume training with different parallelism.'
-              ' Consider removing flag --no-ckpt-fully-parallel-save.')
-    if args.use_dist_ckpt_deprecated and args.rank == 0:
-        print('--use-dist-ckpt is deprecated and has no effect.'
-              ' Use --ckpt-format to select the checkpoint format.')
-    if args.dist_ckpt_format_deprecated and args.rank == 0:
-        print('--dist-ckpt-format is deprecated and has no effect.'
-              ' Use --ckpt-format to select the checkpoint format.')
-
-    # MoE upcycling check
-    if args.moe_use_upcycling:
-        assert args.save is not None, "When using upcycling, the --save option must be specified."
-        if not args.no_load_optim:
-            args.no_load_optim = True
-            print('Warning: disabling --no-load-optim for upcycling.')
-        if not args.no_load_rng:
-            args.no_load_rng = True
-            print('Warning: disabling --no-load-rng for upcycling.')
+    if args.use_dist_ckpt and not args.use_mcore_models:
+        raise RuntimeError('--use-dist-ckpt only support Megatron Core, please add --use-mcore-models.')
 
     # Print arguments.
     _print_args("arguments", args)
