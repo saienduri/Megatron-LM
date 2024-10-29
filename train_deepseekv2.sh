@@ -4,38 +4,19 @@ set -e
 CURRENT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 echo $CURRENT_DIR
 
-echo "DLM_DATAHOME: ${DLM_DATAHOME}"
-echo "DLM_DATANAME: ${DLM_DATANAME}"
+cd ${CURRENT_DIR}
+
+bash download_data.sh
 
 cd ${CURRENT_DIR}
+
 EXPERIMENT_DIR="experiment"
-mkdir -p $EXPERIMENT_DIR
-
-DATA_DIR="${EXPERIMENT_DIR}/data/"
-
-if [[ -n "${DLM_DATAHOME}" ]]; then
-  mkdir -p $DATA_DIR
-  ln -s ${DLM_DATAHOME}/ $DATA_DIR
-  export DATA_DIR=$DATA_DIR/$DLM_DATAHOME
-else
-  export DATA_DIR
-  mkdir -p $DATA_DIR
-  cd $DATA_DIR
-  mkdir -p deepseekv2-train-datasets
-  cd deepseekv2-train-datasets
-  wget https://atp-modelzoo-wlcb-pai.oss-cn-wulanchabu.aliyuncs.com/release/models/pai-megatron-patch/deepseek-datasets/mmap_deepseekv2_datasets_text_document.bin
-  wget https://atp-modelzoo-wlcb-pai.oss-cn-wulanchabu.aliyuncs.com/release/models/pai-megatron-patch/deepseek-datasets/mmap_deepseekv2_datasets_text_document.idx
-  wget https://atp-modelzoo-wlcb-pai.oss-cn-wulanchabu.aliyuncs.com/release/models/pai-megatron-patch/deepseek-datasets/SlimPajama.json
-  wget https://atp-modelzoo-wlcb-pai.oss-cn-wulanchabu.aliyuncs.com/release/models/pai-megatron-patch/deepseek-datasets/alpaca_zh-train.json
-  wget https://atp-modelzoo-wlcb-pai.oss-cn-wulanchabu.aliyuncs.com/release/models/pai-megatron-patch/deepseek-datasets/alpaca_zh-valid.json
-fi
-cd ${CURRENT_DIR}
-
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-train.json
 VALID_DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-valid.json
 OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
-
+echo "HERE"
+mkdir -p $OUTPUT_BASEPATH
 MODEL_NAME=DeepSeek-V2-Lite
 MODEL_SIZE=16B
 
