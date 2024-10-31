@@ -58,7 +58,7 @@ def check_checkpoint_args(checkpoint_args):
     if args.vocab_file:
         _compare('max_position_embeddings')
         _compare('make_vocab_size_divisible_by')
-        if not args.use_dist_ckpt:
+        if not args.use_dist_ckpt_deprecated:
             _compare('padded_vocab_size')
         _compare('tokenizer_type')
     if args.data_parallel_random_init:
@@ -66,7 +66,7 @@ def check_checkpoint_args(checkpoint_args):
     if get_checkpoint_version() < 3.0:
         _compare('tensor_model_parallel_size',
                  old_arg_name='model_parallel_size')
-    if get_checkpoint_version() >= 3.0 and not args.use_dist_ckpt:
+    if get_checkpoint_version() >= 3.0 and not args.use_dist_ckpt_deprecated:
         _compare('tensor_model_parallel_size')
         _compare('pipeline_model_parallel_size')
 
@@ -229,7 +229,7 @@ def read_metadata(tracker_filename):
     return max_iter, release
 
 
-def get_rng_state(use_dist_ckpt: bool = False):
+def get_rng_state(use_dist_ckpt_deprecated: bool = False):
     """ collect rng state across data parallel ranks """
     args = get_args()
     rng_state = {
@@ -252,7 +252,7 @@ def get_rng_state(use_dist_ckpt: bool = False):
     else:
         rng_state_list = [rng_state]
 
-    if use_dist_ckpt:
+    if use_dist_ckpt_deprecated:
         pp_rank = mpu.get_pipeline_model_parallel_rank()
         pp_size = mpu.get_pipeline_model_parallel_world_size()
         tp_rank = mpu.get_tensor_model_parallel_rank()
@@ -271,18 +271,18 @@ def save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
     # Only rank zero of the data parallel writes to the disk.
     model = unwrap_model(model)
 
-    ckpt_format = args.dist_ckpt_format if args.use_dist_ckpt else 'torch'
+    ckpt_format = args.dist_ckpt_format if args.use_dist_ckpt_deprecated else 'torch'
     print_rank_0('saving checkpoint at iteration {:7d} to {} in {} format'.format(
         iteration, args.save, ckpt_format))
 
     # Collect rng state across data parallel ranks.
-    rng_state = get_rng_state(args.use_dist_ckpt)
+    rng_state = get_rng_state(args.use_dist_ckpt_deprecated)
 
     # Checkpoint name.
-    checkpoint_name = get_checkpoint_name(args.save, iteration, return_base_dir=args.use_dist_ckpt)
+    checkpoint_name = get_checkpoint_name(args.save, iteration, return_base_dir=args.use_dist_ckpt_deprecated)
 
     # Save distributed optimizer's custom parameter state.
-    if args.use_distributed_optimizer and not args.no_save_optim and optimizer is not None and not args.use_dist_ckpt:
+    if args.use_distributed_optimizer and not args.no_save_optim and optimizer is not None and not args.use_dist_ckpt_deprecated:
         optim_checkpoint_name = \
             get_distributed_optimizer_checkpoint_name(checkpoint_name)
         ensure_directory_exists(optim_checkpoint_name)
@@ -291,19 +291,19 @@ def save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
     # Collect args, model, RNG.
     if not torch.distributed.is_initialized() \
             or mpu.get_data_modulo_expert_parallel_rank() == 0 \
-            or args.use_dist_ckpt:
+            or args.use_dist_ckpt_deprecated:
 
         optim_sd_kwargs = {}
-        if args.use_dist_ckpt and args.use_distributed_optimizer:
+        if args.use_dist_ckpt_deprecated and args.use_distributed_optimizer:
             optim_sd_kwargs['sharding_type'] = ('fully_sharded_bucket_space'
                                                 if args.ckpt_fully_parallel_save
                                                 else 'dp_zero_gather_scatter')
             print_rank_0(f'Storing distributed optimizer sharded state of type {optim_sd_kwargs["sharding_type"]}')
         state_dict = generate_state_dict(args, model, optimizer, opt_param_scheduler, rng_state,
-                                         args.use_dist_ckpt, iteration, optim_sd_kwargs=optim_sd_kwargs)
+                                         args.use_dist_ckpt_deprecated, iteration, optim_sd_kwargs=optim_sd_kwargs)
 
         state_dict['num_floating_point_operations_so_far'] = num_floating_point_operations_so_far
-        if args.use_dist_ckpt:
+        if args.use_dist_ckpt_deprecated:
             if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
                 ensure_directory_exists(checkpoint_name,
                                         check_parent=False)
@@ -499,7 +499,7 @@ def _load_base_checkpoint(load_dir, rank0=False, sharded_state_dict=None,
 
         if sharded_state_dict is None:
             args = get_args()
-            assert not args.auto_detect_ckpt_format and not args.use_dist_ckpt, (args.auto_detect_ckpt_format, args.use_dist_ckpt)
+            assert not args.auto_detect_ckpt_format and not args.use_dist_ckpt_deprecated, (args.auto_detect_ckpt_format, args.use_dist_ckpt_deprecated)
             raise RuntimeError('Detected load from a distributed checkpoint, but neither --use-dist-ckpt nor --auto-detect-ckpt-format is set.')
         state_dict = dist_checkpointing.load(sharded_state_dict, checkpoint_name)
         return state_dict, checkpoint_name, release
@@ -644,7 +644,7 @@ def load_checkpoint(model, optimizer, opt_param_scheduler, load_arg='load', stri
 
     load_kwargs = {}
     is_dist_ckpt = False
-    if args.auto_detect_ckpt_format or args.use_dist_ckpt:
+    if args.auto_detect_ckpt_format or args.use_dist_ckpt_deprecated:
         state_dict, checkpoint_name, release = _load_base_checkpoint(load_dir, rank0=True, exit_on_missing_checkpoint=args.exit_on_missing_checkpoint)
         is_dist_ckpt = dist_checkpointing.check_is_distributed_checkpoint(checkpoint_name)
         if is_dist_ckpt:
@@ -668,7 +668,7 @@ def load_checkpoint(model, optimizer, opt_param_scheduler, load_arg='load', stri
                                                     if getattr(state_dict['args'], 'ckpt_fully_parallel_save', False)
                                                     else 'dp_zero_gather_scatter')
             load_kwargs['sharded_state_dict'] = generate_state_dict(args, model, optimizer, opt_param_scheduler,
-                                                                    rng_state, args.use_dist_ckpt, optim_sd_kwargs=optim_sd_kwargs)
+                                                                    rng_state, args.use_dist_ckpt_deprecated, optim_sd_kwargs=optim_sd_kwargs)
             load_kwargs['exit_on_missing_checkpoint'] = args.exit_on_missing_checkpoint
 
     state_dict, checkpoint_name, release = _load_base_checkpoint(load_dir, rank0=False, **load_kwargs)

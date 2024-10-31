@@ -665,8 +665,8 @@ def setup_model_and_optimizer(model_provider_func,
         timers('load-checkpoint', log_level=0).start(barrier=True)
 
         args.iteration, args.num_floating_point_operations_so_far = load_checkpoint(
-                model, optimizer, opt_param_scheduler,
-                ft_client=ft_integration.get_rank_monitor_client(), checkpointing_context=checkpointing_context)
+                model, optimizer, opt_param_scheduler)
+                #ft_client=ft_integration.get_rank_monitor_client(), checkpointing_context=checkpointing_context)
         timers('load-checkpoint').stop(barrier=True)
         timers.log(['load-checkpoint'])
         one_logger and one_logger.log_metrics({

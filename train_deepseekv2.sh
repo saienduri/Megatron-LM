@@ -15,7 +15,7 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-train.json
 VALID_DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-valid.json
 OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
-echo "HERE"
+
 mkdir -p $OUTPUT_BASEPATH
 MODEL_NAME=DeepSeek-V2-Lite
 MODEL_SIZE=16B
@@ -261,7 +261,7 @@ megatron_options="  \
         --no-load-rng \
         --num-workers 8 \
         --extra-vocab-size ${EXTRA_VOCAB_SIZE} \
-        --patch-tokenizer-type LLamaTokenizer \
+        --tokenizer-type DeepSeekV2Tokenizer \
         --dataset LLama-Pretrain-Raw \
         --swiglu \
         --normalization RMSNorm \

@@ -31,7 +31,7 @@ from megatron.training.utils import (
 
 from megatron.training.arguments import get_patch_args
 from megatron.training.tokenizer import build_tokenizer, get_tokenizer
-from megatron.training.utils import get_batch_on_this_tp_rank_original, get_batch_on_this_tp_rank_idxmap_sft
+from megatron.training.utils import get_batch_on_this_tp_rank_original
 
 
 # from megatron.core.models.deepseekv2.layer_specs import (
@@ -40,8 +40,6 @@ from megatron.training.utils import get_batch_on_this_tp_rank_original, get_batc
 from megatron.core.models.deepseekv2.layer_specs import get_gpt_layer_with_local_spec
 from megatron.core.models.deepseekv2.model import GPTModel
 from megatron.core.models.deepseekv2.transformer_config import DeepSeekV2TransformerConfig
-
-
 
 torch._dynamo.config.suppress_errors = True
 
@@ -113,7 +111,7 @@ def get_batch(data_iterator):
         if args.train_mode == "pretrain":
             batch = get_batch_on_this_tp_rank(data_iterator)
         else:
-            batch = get_batch_on_this_tp_rank_idxmap_sft(data_iterator)
+            batch = get_batch_on_this_cp_rank(batch)
 
         packed_seq_params = None
         if args.reset_position_ids:
