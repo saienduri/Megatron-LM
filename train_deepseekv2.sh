@@ -262,6 +262,7 @@ megatron_options="  \
         --num-workers 8 \
         --extra-vocab-size ${EXTRA_VOCAB_SIZE} \
         --tokenizer-type DeepSeekV2Tokenizer \
+        --tokenizer-model deepseek-ai/DeepSeek-V2-Lite \
         --dataset LLama-Pretrain-Raw \
         --swiglu \
         --normalization RMSNorm \

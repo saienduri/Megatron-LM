@@ -270,7 +270,7 @@ def validate_args(args, defaults={}):
             '--overlap-param-gather only supported with distributed optimizer'
         assert args.overlap_grad_reduce, \
             '--overlap-grad-reduce should be turned on when using --overlap-param-gather'
-        assert args.use_mcore_models, \
+        assert args.deprecated_use_mcore_models, \
             '--overlap-param-gather only supported with MCore models'
 
     # Parameters dtype.
@@ -484,7 +484,7 @@ def validate_args(args, defaults={}):
             "retro currently does not support pipeline parallelism."
 
     if args.decoupled_lr is not None or args.decoupled_min_lr is not None:
-        assert args.use_mcore_models, \
+        assert args.deprecated_use_mcore_models, \
             '--decoupled-lr and --decoupled-min-lr only supported by Megatron Core, please add --use-mcore-models.'
 
     # Legacy RoPE arguments
@@ -492,7 +492,7 @@ def validate_args(args, defaults={}):
         args.position_embedding_type = 'rope'
     if args.rotary_interleaved and args.apply_rope_fusion:
         raise RuntimeError('--rotary-interleaved does not work with rope_fusion.')
-    if args.rotary_interleaved and not args.use_mcore_models:
+    if args.rotary_interleaved and not args.deprecated_use_mcore_models:
         raise RuntimeError('--rotary-interleaved only support Megatron Core, please add --use-mcore-models.')
 
     # Would just need to add 'NoPE' as a position_embedding_type to support this, but for now
@@ -516,7 +516,7 @@ def validate_args(args, defaults={}):
             "Expert parallelism is not supported with fp16 training."
 
     # Distributed checkpointing checks
-    if args.use_dist_ckpt_deprecated and not args.use_mcore_models:
+    if args.use_dist_ckpt_deprecated and not args.deprecated_use_mcore_models:
         raise RuntimeError('--use-dist-ckpt only support Megatron Core, please add --use-mcore-models.')
 
     # Print arguments.
