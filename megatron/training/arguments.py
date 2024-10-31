@@ -516,7 +516,7 @@ def validate_args(args, defaults={}):
             "Expert parallelism is not supported with fp16 training."
 
     # Distributed checkpointing checks
-    if args.use_dist_ckpt and not args.use_mcore_models:
+    if args.use_dist_ckpt_deprecated and not args.use_mcore_models:
         raise RuntimeError('--use-dist-ckpt only support Megatron Core, please add --use-mcore-models.')
 
     # Print arguments.

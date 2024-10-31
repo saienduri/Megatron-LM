@@ -16,7 +16,7 @@ from megatron.core.datasets.gpt_dataset import (
     GPTDatasetConfig,
     MockGPTDataset,
 )
-from megatron.legacy.model import GPTModel
+
 from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.core.datasets.utils import get_blend_from_list
 from megatron.core.enums import ModelType
