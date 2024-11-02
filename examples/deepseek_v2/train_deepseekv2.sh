@@ -2,37 +2,39 @@
 set -e
 
 CURRENT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+MEGATRON_PATH=$( dirname $( dirname ${CURRENT_DIR}))
+export PYTHONPATH=${MEGATRON_PATH}:${MEGATRON_PATH}/PAI-Megatron-LM-240718:$PYTHONPATH
+
 echo $CURRENT_DIR
 
-cd ${CURRENT_DIR}
+# cd ${CURRENT_DIR}
 
 EXPERIMENT_DIR="experiment"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 
-mkdir -p $OUTPUT_BASEPATH
 MODEL_NAME=DeepSeek-V2-Lite
 
 DATA_DIR="/data"
 MODEL=deepseek-ai/${MODEL_NAME}
 
 MODEL_SIZE=16B
-BATCH_SIZE=4
-GLOBAL_BATCH_SIZE=256
+BATCH_SIZE=1
+GLOBAL_BATCH_SIZE=8
 LR=1e-5
 MIN_LR=1e-6
-SEQ_LEN=2048
-PAD_LEN=2048
+SEQ_LEN=128
+PAD_LEN=128
 PR=bf16
-TP=1
+TP=2
 PP=1  
 CP=1
-EP=8  
+EP=4  
 SP=true
 DO=true
 FL=true
-SFT=true
-AC=sel #full
+SFT=false
+AC=false #full
 OPTIMIZER_OFFLOAD=false
 SAVE_INTERVAL=5000
 DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-train.json
@@ -44,11 +46,6 @@ OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
 
 
 TRAIN_LOG=${EXPERIMENT_DIR}/MI300X-$MODEL_NAME-${PR}-seq${SEQ_LEN}-tp${TP}pp${PP}ep${EP}-mbs${MBS}gbs${GBS}-ac_${AC}-do_${DO}-fa_${FL}-sp_${SP}-${TIMESTAMP}.log
-
-set -e
-
-MEGATRON_PATH="$( cd "$( dirname "$0" )" && pwd )"
-echo $MEGATRON_PATH #/workspace/Pai-Megatron-Patch-rocm-finetune   /
 
 ENV=dsw
 
