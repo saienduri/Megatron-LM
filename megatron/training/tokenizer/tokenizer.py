@@ -72,7 +72,7 @@ def build_tokenizer(args, **kwargs):
         tokenizer = _NullTokenizer(args.vocab_size)
 
     elif args.tokenizer_type == 'DeepSeekV2Tokenizer':
-        tokenizer = _DeepSeekV2Tokenizer(args.tokenizer_model)
+        tokenizer = _DeepSeekV2Tokenizer(args.load)
         args.padded_vocab_size = tokenizer.vocab_size
 
     else:
@@ -561,8 +561,8 @@ class _Llama2Tokenizer(_SentencePieceTokenizer):
 
 
 class _DeepSeekV2Tokenizer(MegatronTokenizer):
-    def __init__(self, tokenizer_path):
-        super().__init__(tokenizer_path)
+    def __init__(self, tokenizer_path, extra_vocab_size=0):
+        super().__init__(tokenizer_path, extra_vocab_size)
         try:
             import transformers
         except ImportError:
@@ -572,6 +572,7 @@ class _DeepSeekV2Tokenizer(MegatronTokenizer):
             tokenizer_path,
             trust_remote_code=True
         )
+        self.extra_vocab_size = extra_vocab_size
 
     def __call__(self, text, return_tensors=None,
                     padding=None, max_length=None, truncation=None, add_special_tokens=None):
@@ -581,7 +582,7 @@ class _DeepSeekV2Tokenizer(MegatronTokenizer):
 
     @property
     def vocab_size(self):
-        return len(self.tokenizer)
+        return len(self.tokenizer) + self.extra_vocab_size
 
     @property
     def vocab(self):

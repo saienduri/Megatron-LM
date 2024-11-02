@@ -6,39 +6,42 @@ echo $CURRENT_DIR
 
 cd ${CURRENT_DIR}
 
-bash download_data.sh
-
-cd ${CURRENT_DIR}
-
 EXPERIMENT_DIR="experiment"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-train.json
-VALID_DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-valid.json
-OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
+
 
 mkdir -p $OUTPUT_BASEPATH
 MODEL_NAME=DeepSeek-V2-Lite
-MODEL_SIZE=16B
 
+DATA_DIR="/data"
 MODEL=deepseek-ai/${MODEL_NAME}
-TP=1
-PP=1  
-EP=8  
-AC=sel #full
-DO=true 
-FL=true
-SP=true
+
+MODEL_SIZE=16B
 BATCH_SIZE=4
-GLOBAL_BATCH_SIZE=256 
+GLOBAL_BATCH_SIZE=256
+LR=1e-5
+MIN_LR=1e-6
 SEQ_LEN=2048
 PAD_LEN=2048
 PR=bf16
+TP=1
+PP=1  
+CP=1
+EP=8  
+SP=true
+DO=true
+FL=true
+SFT=true
+AC=sel #full
+OPTIMIZER_OFFLOAD=false
 SAVE_INTERVAL=5000
-LR=1e-5
-MIN_LR=1e-6
+DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-train.json
+VALID_DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/alpaca_zh-valid.json
+PRETRAIN_CHECKPOINT_PATH=${DATA_DIR}/deepseek-ckpts/DeepSeek-V2-Lite
 TRAIN_ITERS=20
 LR_WARMUP_ITERS=2
-PRETRAIN_CHECKPOINT_PATH==deepseek-ai/${MODEL_NAME}
+OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
+
 
 TRAIN_LOG=${EXPERIMENT_DIR}/MI300X-$MODEL_NAME-${PR}-seq${SEQ_LEN}-tp${TP}pp${PP}ep${EP}-mbs${MBS}gbs${GBS}-ac_${AC}-do_${DO}-fa_${FL}-sp_${SP}-${TIMESTAMP}.log
 
@@ -262,7 +265,6 @@ megatron_options="  \
         --num-workers 8 \
         --extra-vocab-size ${EXTRA_VOCAB_SIZE} \
         --tokenizer-type DeepSeekV2Tokenizer \
-        --tokenizer-model deepseek-ai/DeepSeek-V2-Lite \
         --dataset LLama-Pretrain-Raw \
         --swiglu \
         --normalization RMSNorm \
