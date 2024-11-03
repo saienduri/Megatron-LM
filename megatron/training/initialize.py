@@ -25,6 +25,8 @@ from megatron.core.fusions.fused_bias_dropout import bias_dropout_add_fused_trai
 from megatron.core.fusions.fused_bias_gelu import bias_gelu
 from megatron.core.fusions.fused_bias_swiglu import bias_swiglu
 
+from .arguments import validate_moe_args
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,7 +69,7 @@ def initialize_megatron(
     else:
         validate_args(args, args_defaults)
 
-
+    validate_moe_args(args, args_defaults)
     # set global args, build tokenizer, and set adlr-autoresume,
     # tensorboard-writer, and timers.
     set_global_variables(args)

@@ -4,10 +4,19 @@ set -e
 CURRENT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 MEGATRON_PATH=$( dirname $( dirname ${CURRENT_DIR}))
 export PYTHONPATH=${MEGATRON_PATH}:${MEGATRON_PATH}/PAI-Megatron-LM-240718:$PYTHONPATH
-
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 echo $CURRENT_DIR
 
-# cd ${CURRENT_DIR}
+ENV=dsw
+
+# Here are some configs controled by env
+if [ -z ${MP_DATASET_TYPE} ];then
+    MP_DATASET_TYPE="idxmap"
+fi
+
+if [ -z ${MP_AC_LAYERS} ];then
+    MP_AC_LAYERS=1
+fi
 
 EXPERIMENT_DIR="experiment"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -15,7 +24,7 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 MODEL_NAME=DeepSeek-V2-Lite
 
-DATA_DIR="/data"
+DATA_DIR="/workspace/data"
 MODEL=deepseek-ai/${MODEL_NAME}
 
 MODEL_SIZE=16B
@@ -47,8 +56,6 @@ OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
 
 TRAIN_LOG=${EXPERIMENT_DIR}/MI300X-$MODEL_NAME-${PR}-seq${SEQ_LEN}-tp${TP}pp${PP}ep${EP}-mbs${MBS}gbs${GBS}-ac_${AC}-do_${DO}-fa_${FL}-sp_${SP}-${TIMESTAMP}.log
 
-ENV=dsw
-
 if [ $ENV = dsw ]; then
 export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 MASTER_ADDR=localhost
@@ -63,6 +70,17 @@ NNODES=${WORLD_SIZE}
 NODE_RANK=${RANK}
 GPUS_PER_NODE=${KUBERNETES_CONTAINER_RESOURCE_GPU}
 
+fi
+
+if [ -z ${MP_VP} ]; then
+    vp_options=""
+else
+    vp_options=" \
+        --num-layers-per-virtual-pipeline-stage ${MP_VP}"
+fi
+
+if [ -z ${MP_SFT_PACKING} ]; then
+    MP_SFT_PACKING=false
 fi
 
 if [ $MODEL_SIZE = 236B ]; then
@@ -140,6 +158,18 @@ moe_options=" \
 
 fi
 
+TP_COMM_OVERLAP=$(( ($TP > 1) ? 1 : 0 ))
+comm_overlap_option="\
+    --overlap-grad-reduce \
+    --overlap-param-gather"
+
+if [ $TP_COMM_OVERLAP -eq 1 ]; then
+    comm_overlap_option="\
+        --tp-comm-overlap \
+        --overlap-grad-reduce \
+        --overlap-param-gather"
+fi
+
 if [ $AC = full ]; then
     activation_checkpoint_options=" \
 		    --recompute-method uniform \
@@ -170,12 +200,26 @@ elif [ $PR = fp8 ]; then
         --transformer-impl transformer_engine"
 fi
 
+if [ $OPTIMIZER_OFFLOAD != false ] && [ $DO = false ]; then
+    echo "Offload optimizer is valid only if \$DO=true"
+    DO=true
+fi
+
 if [ $DO = true ]; then
     do_options=" \
 		    --use-distributed-optimizer"
 
 elif [ $DO = false ]; then
     do_options=" \
+                    "
+fi
+
+if [ $SP = true ] && [ $TP -gt 1 ]; then
+    sp_options=" \
+		    --sequence-parallel"
+
+elif [ $SP = false ]; then
+    sp_options=" \
                     "
 fi
 
@@ -188,19 +232,36 @@ elif [ $FL = false ]; then
                     "
 fi
 
-
-if [ $SP = true ] && [ $TP -gt 1 ]; then
-    sp_options=" \
-		    --sequence-parallel"
-
-elif [ $SP = false ]; then
-    sp_options=" \
-                    "
-fi
-
 if [ $PRETRAIN_CHECKPOINT_PATH != none ]; then
     load_options=" \
             --load $PRETRAIN_CHECKPOINT_PATH"
+fi
+
+if [ $OPTIMIZER_OFFLOAD = 'static' ]; then
+    offload_option=" \
+        --optimizer hybridadam \
+        --optimizer-offload-policy static \
+        --optimizer-offload-fraction 1.0"
+elif [ $OPTIMIZER_OFFLOAD = 'auto' ]; then
+    offload_option=" \
+        --optimizer hybridadam \
+        --optimizer-offload-policy auto"
+else
+    offload_option=""
+fi
+
+sft_option="--train-mode pretrain"
+if [ ${MP_DATASET_TYPE} = "raw" ]; then
+    dataset_option=" \
+        --train-data-path ${DATASET_PATH} \
+        --valid-data-path ${VALID_DATASET_PATH} \
+        --dataloader-type cyclic \
+        --dataset LLama-SFT-Raw"
+else 
+    dataset_option=" \
+        --data-path ${DATASET_PATH} \
+        --split 99,1,0 \
+        --dataset LLama-Pretrain-Idxmap"
 fi
 
 LR_DECAY_ITERS=$(( ${TRAIN_ITERS} - ${LR_WARMUP_ITERS}))
@@ -261,7 +322,7 @@ megatron_options="  \
         --no-load-rng \
         --num-workers 8 \
         --extra-vocab-size ${EXTRA_VOCAB_SIZE} \
-        --tokenizer-type DeepSeekV2Tokenizer \
+        --patch-tokenizer-type DeepSeekV2Tokenizer \
         --dataset LLama-Pretrain-Raw \
         --swiglu \
         --normalization RMSNorm \
@@ -273,6 +334,7 @@ megatron_options="  \
         --untie-embeddings-and-output-weights \
         --disable-bias-linear \
         --use-mcore-models \
+        --use-legacy-models \
         --rotary-base ${ROPE_THETA} \
         --rotary-scaling-factor ${SCALE_FACTOR} \
         --transformer-impl transformer_engine \
@@ -282,8 +344,9 @@ megatron_options="  \
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
-run_cmd="torchrun $DISTRIBUTED_ARGS pretrain_deepseek.py
- ${megatron_options} ${pr_options} ${load_options} ${activation_checkpoint_options} ${do_options} ${flash_options} ${sp_options} ${moe_options}"
+run_cmd="torchrun $DISTRIBUTED_ARGS /workspace/Megatron-LM/examples/deepseek_v2/pretrain_deepseek.py 
+ ${megatron_options} ${dataset_option} ${pr_options} ${load_options} ${activation_checkpoint_options} \
+ ${do_options} ${sp_options} ${moe_options} ${offload_option} ${sft_option} ${vp_options} ${flash_options}"
 
 echo ${run_cmd}
 eval ${run_cmd}

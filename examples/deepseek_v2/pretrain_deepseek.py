@@ -51,7 +51,7 @@ def model_provider(
     args = get_args()
     build_tokenizer(args)
     config = core_transformer_config_from_args(args, DeepSeekV2TransformerConfig)
-
+    args.deprecated_use_mcore_models=True
     # if use_te:
     if args.deprecated_use_mcore_models:
         print_rank_0("building deepseek_v2 model ...")

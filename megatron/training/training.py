@@ -279,21 +279,21 @@ def pretrain(
     one_logger_utils.on_pretrain_start()
 
     # Context used for persisting some state between checkpoint saves.
-    if args.non_persistent_ckpt_type == 'local':
-        raise RuntimeError('LocalCheckpointManagers are not yet integrated')
-        checkpointing_context = {
-            'local_checkpoint_manager': BasicLocalCheckpointManager(
-                args.non_persistent_local_ckpt_dir
-            )
-        }
-    else:
-        checkpointing_context = {}
+    #if args.non_persistent_ckpt_type == 'local':
+    #    raise RuntimeError('LocalCheckpointManagers are not yet integrated')
+    #    checkpointing_context = {
+    #        'local_checkpoint_manager': BasicLocalCheckpointManager(
+    #            args.non_persistent_local_ckpt_dir
+    #        )
+    #    }
+    #else:
+    #    checkpointing_context = {}
 
     # Model, optimizer, and learning rate.
     timers('model-and-optimizer-setup', log_level=0).start(barrier=True)
     app_metrics['app_build_optimizer_start_time'] = one_logger_utils.get_timestamp_in_ms()
     model, optimizer, opt_param_scheduler = setup_model_and_optimizer(
-        model_provider, model_type, checkpointing_context=checkpointing_context)
+        model_provider, model_type)
 
     timers('model-and-optimizer-setup').stop()
     print_datetime('after model, optimizer, and learning rate '
@@ -613,8 +613,7 @@ def setup_model_and_optimizer(model_provider_func,
                               model_type,
                               no_wd_decay_cond=None,
                               scale_lr_cond=None,
-                              lr_mult=1.0,
-                              checkpointing_context=None):
+                              lr_mult=1.0):
     """Setup model and optimizer."""
     args = get_args()
     timers = get_timers()

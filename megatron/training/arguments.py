@@ -524,6 +524,9 @@ def validate_args(args, defaults={}):
 
     return args
 
+def validate_moe_args(args, defaults={}):
+    pass
+
 
 def _print_args(title, args):
     """Print arguments."""
