@@ -288,6 +288,7 @@ def pretrain(
     #    }
     #else:
     #    checkpointing_context = {}
+    checkpointing_context = {}
 
     # Model, optimizer, and learning rate.
     timers('model-and-optimizer-setup', log_level=0).start(barrier=True)
@@ -363,9 +364,10 @@ def pretrain(
         if args.save and iteration != 0 and iteration % args.save_interval != 0:
             save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
                             num_floating_point_operations_so_far, checkpointing_context,
-                            train_data_iterator=train_data_iterator,
-                            ft_client=ft_integration.get_rank_monitor_client(
-                                ft_integration.StateMachineActions.SAVE_CHECKPOINT))
+                            #train_data_iterator=train_data_iterator,
+                            #ft_client=ft_integration.get_rank_monitor_client(
+                            #    ft_integration.StateMachineActions.SAVE_CHECKPOINT))
+            )
 
         one_logger and one_logger.log_metrics({
             'app_train_loop_finish_time': one_logger_utils.get_timestamp_in_ms()
@@ -873,10 +875,10 @@ def training_log(loss_dict, total_loss_dict, learning_rate, decoupled_learning_r
                           args.consumed_train_samples)
         if wandb_writer:
             wandb_writer.log({'learning-rate': learning_rate}, iteration)
-        if args.skipped_train_samples > 0:
-            writer.add_scalar('skipped-train-samples', args.skipped_train_samples, iteration)
-            if wandb_writer:
-                wandb_writer.log({'skipped-train-samples': args.skipped_train_samples}, iteration)
+        # if args.skipped_train_samples > 0:
+        #     writer.add_scalar('skipped-train-samples', args.skipped_train_samples, iteration)
+        #     if wandb_writer:
+        #         wandb_writer.log({'skipped-train-samples': args.skipped_train_samples}, iteration)
         writer.add_scalar('batch-size', batch_size, iteration)
         writer.add_scalar('batch-size vs samples', batch_size,
                           args.consumed_train_samples)
@@ -960,9 +962,9 @@ def training_log(loss_dict, total_loss_dict, learning_rate, decoupled_learning_r
             iteration, args.train_iters)
         log_string += ' consumed samples: {:12d} |'.format(
             args.consumed_train_samples)
-        if args.skipped_train_samples > 0:
-            log_string += ' skipped samples: {:12d} |'.format(
-                args.skipped_train_samples)
+        # if args.skipped_train_samples > 0:
+        #     log_string += ' skipped samples: {:12d} |'.format(
+        #         args.skipped_train_samples)
         log_string += ' elapsed time per iteration (ms): {:.1f} |'.format(
             elapsed_time_per_iteration * 1000.0)
         if args.log_throughput:
@@ -1070,9 +1072,10 @@ def save_checkpoint_and_time(iteration, model, optimizer, opt_param_scheduler,
         optimizer.disable_pre_hook()
     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
                     num_floating_point_operations_so_far, checkpointing_context,
-                    non_persistent_ckpt=non_persistent_ckpt, train_data_iterator=train_data_iterator,
-                    ft_client=ft_integration.get_rank_monitor_client(
-                        ft_integration.StateMachineActions.SAVE_CHECKPOINT))
+    #                non_persistent_ckpt=non_persistent_ckpt, train_data_iterator=train_data_iterator,
+    #                ft_client=ft_integration.get_rank_monitor_client(
+    #                    ft_integration.StateMachineActions.SAVE_CHECKPOINT))
+    )
     if args.use_distributed_optimizer and args.overlap_param_gather:
         optimizer.enable_pre_hook()
     timers(timer_key).stop(barrier=True)
@@ -1241,13 +1244,13 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                      args.micro_batch_size * \
                      get_num_microbatches()
         args.consumed_train_samples += batch_size
-        num_skipped_samples_in_batch = (get_current_global_batch_size() -
-                                        get_current_running_global_batch_size())
-        if args.decrease_batch_size_if_needed:
-            assert num_skipped_samples_in_batch >= 0
-        else:
-            assert num_skipped_samples_in_batch == 0
-        args.skipped_train_samples += num_skipped_samples_in_batch
+        #num_skipped_samples_in_batch = (get_current_global_batch_size() -
+        #                                get_current_running_global_batch_size())
+        #if args.decrease_batch_size_if_needed:
+        #    assert num_skipped_samples_in_batch >= 0
+        #else:
+        #    assert num_skipped_samples_in_batch == 0
+        #args.skipped_train_samples += num_skipped_samples_in_batch
         num_fp_ops = num_floating_point_operations(args, batch_size)
         num_floating_point_operations_so_far += num_fp_ops
         total_flops += num_fp_ops

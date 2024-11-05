@@ -1,21 +1,30 @@
 """Input/output checkpointing."""
 
+from logging import getLogger
 import os
 import random
 import sys
 import numpy as np
+from time import time
 
 import torch
 
-from megatron.training import update_num_microbatches
+#from megatron.training import update_num_microbatches
 from megatron.core import mpu, tensor_parallel, dist_checkpointing
-from ..core.dist_checkpointing.mapping import ShardedObject
-from .global_vars import get_args
+from megatron.core.dist_checkpointing.mapping import ShardedObject
+from .global_vars import get_args, get_one_logger
 from .utils import (unwrap_model,
-                    print_rank_0)
-
+                    print_rank_0,
+                    append_to_progress_log, 
+                    is_last_rank)
+from megatron.core.dist_checkpointing.serialization import get_default_save_sharded_strategy, get_default_load_sharded_strategy
+from megatron.core.dist_checkpointing.strategies.fully_parallel import FullyParallelSaveStrategyWrapper, FullyParallelLoadStrategyWrapper
+from megatron.core.num_microbatches_calculator import update_num_microbatches
+from .async_utils import schedule_async_save
+from .one_logger_utils import on_save_checkpoint_start, on_save_checkpoint_success
 
 _CHECKPOINT_VERSION = None
+logger = getLogger(__name__)
 
 
 def set_checkpoint_version(value):
@@ -264,9 +273,12 @@ def get_rng_state(use_dist_ckpt_deprecated: bool = False):
 
 
 def save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
-                    num_floating_point_operations_so_far):
+                    num_floating_point_operations_so_far, checkpointing_context=None):
     """Save a model checkpoint."""
     args = get_args()
+    start_ckpt = time()
+    # Prepare E2E metrics at start of save checkpoint
+    productive_metrics = on_save_checkpoint_start(args.async_save)    
 
     # Only rank zero of the data parallel writes to the disk.
     model = unwrap_model(model)
@@ -307,13 +319,30 @@ def save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
             if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
                 ensure_directory_exists(checkpoint_name,
                                         check_parent=False)
-            dist_checkpointing.save(state_dict, checkpoint_name, (args.dist_ckpt_format, 1))
-
+            if checkpointing_context is not None and 'save_strategy' in checkpointing_context:
+                save_strategy = checkpointing_context['save_strategy']
+                # Already saved once before - don't need to rerun sharding validation
+                validate_sharding_integrity = not args.ckpt_assume_constant_structure
+            else:
+                validate_sharding_integrity = True
+                save_strategy = get_default_save_sharded_strategy(args.dist_ckpt_format)
+                if args.ckpt_assume_constant_structure and args.dist_ckpt_format == 'torch_dist':
+                    save_strategy.use_cached_ckpt_structure = args.ckpt_assume_constant_structure
+                if args.ckpt_fully_parallel_save:
+                    save_strategy = FullyParallelSaveStrategyWrapper(save_strategy, mpu.get_data_parallel_group(with_context_parallel=True),
+                                                                     args.ckpt_assume_constant_structure)
+            # Store save strategy for future checkpoint saves
+            if checkpointing_context is not None:
+                checkpointing_context['save_strategy'] = save_strategy
+            end_ckpt = time()
+            logger.debug(f"rank: {rank}, takes {end_ckpt - start_ckpt} to prepare state dict for ckpt ")
+            async_save_request = dist_checkpointing.save(state_dict, checkpoint_name, save_strategy,
+                                                         async_sharded_save=args.async_save,
+                                                         validate_access_integrity=validate_sharding_integrity)
         else:
             # Save.
             ensure_directory_exists(checkpoint_name)
             torch.save(state_dict, checkpoint_name)
-
     # Wait so everyone is done (necessary)
     if torch.distributed.is_initialized():
         torch.distributed.barrier()
@@ -325,9 +354,38 @@ def save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
     if not torch.distributed.is_initialized() \
        or torch.distributed.get_rank() == 0:
         tracker_filename = get_checkpoint_tracker_filename(args.save)
-        with open(tracker_filename, 'w') as f:
-            f.write(str(iteration))
+        #with open(tracker_filename, 'w') as f:
+        #    f.write(str(iteration))
+        def iter_finalize_fn():
+            with open(tracker_filename, 'w') as f:
+                f.write(str(iteration))
+            print_rank_0('  successfully saved checkpoint from iteration {:7d} to {}'
+                         .format(iteration, args.save))
+            if args.log_progress and args.async_save:
+                append_to_progress_log(f'Saved async checkpoint\tIteration: {iteration}',
+                                       barrier=False)
 
+        if args.async_save:
+            assert async_save_request is not None
+            async_save_request.add_finalize_fn(iter_finalize_fn)
+        else:
+            iter_finalize_fn()
+    # Additional callback for one_logger (last rank)
+    if not torch.distributed.is_initialized() \
+       or is_last_rank():
+        def onelogger_finalize_fn():
+            on_save_checkpoint_success(productive_metrics, args.async_save)
+        if args.async_save:
+            assert async_save_request is not None
+            async_save_request.add_finalize_fn(onelogger_finalize_fn)
+        else:
+            onelogger_finalize_fn()
+
+    if args.async_save:
+        schedule_async_save(async_save_request)
+        print_rank_0('  scheduled an async checkpoint save at iteration {:7d} to {}' \
+                     .format(iteration, args.save))
+        
     # Wait so everyone is done (not necessary)
     if torch.distributed.is_initialized():
         torch.distributed.barrier()
