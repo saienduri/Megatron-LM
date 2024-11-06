@@ -584,7 +584,8 @@ def core_transformer_config_from_args(args, config_class=None):
     else:
         kw_args['num_query_groups'] = None
     kw_args['config_logger_dir'] = args.config_logger_dir
-
+    
+    kw_args["cross_entropy_loss_fusion"] = args.cross_entropy_loss_fusion
     # Return config.
     return config_class(**kw_args)
 

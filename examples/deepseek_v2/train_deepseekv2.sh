@@ -49,8 +49,9 @@ SAVE_INTERVAL=5000
 DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/mmap_deepseekv2_datasets_text_document
 VALID_DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/mmap_deepseekv2_datasets_text_document
 PRETRAIN_CHECKPOINT_PATH=${DATA_DIR}/deepseek-ckpts/DeepSeek-V2-Lite
-TRAIN_ITERS=20
-LR_WARMUP_ITERS=2
+TRAIN_ITERS=$(( ${TRAIN_TOKENS} / ${GLOBAL_BATCH_SIZE} / ${SEQ_LEN} ))
+LR_WARMUP_ITERS=$(( ${WARMUP_TOKENS}  / ${GLOBAL_BATCH_SIZE} / ${SEQ_LEN} ))
+LR_DECAY_ITERS=$(( ${TRAIN_TOKENS} /  ${GLOBAL_BATCH_SIZE} / ${SEQ_LEN} ))
 OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
 
 
@@ -264,7 +265,6 @@ else
         --dataset LLama-Pretrain-Idxmap"
 fi
 
-LR_DECAY_ITERS=$(( ${TRAIN_ITERS} - ${LR_WARMUP_ITERS}))
 
 NAME="${ENV}-finetune-mcore-deepseek-${MODEL_SIZE}-lr-${LR}-bs-${BATCH_SIZE}-seqlen-${SEQ_LEN}-pr-${PR}-tp-${TP}-pp-${PP}-ac-${AC}-do-${DO}-sp-${SP}"
 mkdir -p "${OUTPUT_BASEPATH}/tensorboard/"
