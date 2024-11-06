@@ -49,9 +49,9 @@ SAVE_INTERVAL=5000
 DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/mmap_deepseekv2_datasets_text_document
 VALID_DATASET_PATH=${DATA_DIR}/deepseekv2-train-datasets/mmap_deepseekv2_datasets_text_document
 PRETRAIN_CHECKPOINT_PATH=${DATA_DIR}/deepseek-ckpts/DeepSeek-V2-Lite
-TRAIN_ITERS=$(( ${TRAIN_TOKENS} / ${GLOBAL_BATCH_SIZE} / ${SEQ_LEN} ))
-LR_WARMUP_ITERS=$(( ${WARMUP_TOKENS}  / ${GLOBAL_BATCH_SIZE} / ${SEQ_LEN} ))
-LR_DECAY_ITERS=$(( ${TRAIN_TOKENS} /  ${GLOBAL_BATCH_SIZE} / ${SEQ_LEN} ))
+TRAIN_ITERS=20
+LR_WARMUP_ITERS=2
+LR_DECAY_ITERS=$(( ${TRAIN_ITERS} - ${LR_WARMUP_ITERS}))
 OUTPUT_BASEPATH=${EXPERIMENT_DIR}/deepseek-ckpts/test_ft
 
 
