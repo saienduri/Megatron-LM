@@ -349,6 +349,7 @@ run_cmd="torchrun $DISTRIBUTED_ARGS /workspace/Megatron-LM/examples/deepseek_v2/
  ${megatron_options} ${dataset_option} ${pr_options} ${load_options} ${activation_checkpoint_options} \
  ${do_options} ${sp_options} ${moe_options} ${offload_option} ${sft_option} ${vp_options} ${flash_options}"
 
+run_cmd="$run_cmd | tee $TRAIN_LOG"
 echo ${run_cmd}
 eval ${run_cmd}
 set +x
