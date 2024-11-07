@@ -323,6 +323,7 @@ megatron_options="  \
         --num-workers 8 \
         --extra-vocab-size ${EXTRA_VOCAB_SIZE} \
         --patch-tokenizer-type DeepSeekV2Tokenizer \
+        --tokenizer-type DeepSeekV2Tokenizer \
         --dataset LLama-Pretrain-Raw \
         --swiglu \
         --normalization RMSNorm \
@@ -351,3 +352,35 @@ run_cmd="torchrun $DISTRIBUTED_ARGS /workspace/Megatron-LM/examples/deepseek_v2/
 echo ${run_cmd}
 eval ${run_cmd}
 set +x
+
+echo 'import argparse
+import numpy as np
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+                        prog="Process Log")
+    parser.add_argument("filename")
+    args = parser.parse_args()
+
+    with open(args.filename) as f:
+        lines = f.readlines()
+    lines = lines[1:-1]
+    lines = [float(a) for a in lines]
+    mean = np.mean(np.array(lines))
+    print(mean)' > mean_log_value.py
+
+
+echo '============================================================================================================'
+grep -Eo 'throughput per GPU [^|]*' $TRAIN_LOG | sed -E 's/.*throughput per GPU \(TFLOP\/s\/GPU\): ([0-9\.]+).*/\1/' > tmp.txt
+echo "throughput per GPU: $(python mean_log_value.py tmp.txt)" |& tee -a $TRAIN_LOG
+THROUGHPUT=$(python mean_log_value.py tmp.txt)
+rm tmp.txt
+
+echo '============================================================================================================'
+grep -Eo 'elapsed time per iteration [^|]*' $TRAIN_LOG | sed -E 's/.*elapsed time per iteration \(ms\): ([0-9\.]+).*/\1/' > tmp.txt
+echo "elapsed time per iteration: $(python mean_log_value.py tmp.txt)" |& tee -a $TRAIN_LOG
+
+TIME_PER_ITER=$(python mean_log_value.py tmp.txt 2>/dev/null | awk '{printf "%.6f", $0}')
+PERFORMANCE=$(awk -v bs="$BS" -v sl="$SEQ_LENGTH" -v tpi="$TIME_PER_ITER" -v ws="$WORLD_SIZE" 'BEGIN {printf "%.6f", bs * sl * 1000/ (tpi * ws)}')
+echo "tokens/GPU/s: $PERFORMANCE" |& tee -a $TRAIN_LOG
+rm tmp.txt
