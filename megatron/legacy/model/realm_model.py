@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 import os
 import torch
 
@@ -132,7 +131,7 @@ class ICTBertModel(MegatronModule):
 
         try:
             state_dict = torch.load(checkpoint_name, map_location='cpu')
-        except Exception:
+        except BaseException:
             raise ValueError("Could not load checkpoint")
 
         # load the LM state dict into each model

@@ -11,6 +11,7 @@ from megatron.core.models.gpt import GPTModel
 
 
 class RetroModel(GPTModel):
+
     """Retro Model.
 
     A Retro model mostly re-uses the GPTModel interface, with the only difference
@@ -78,7 +79,7 @@ class RetroModel(GPTModel):
             decoder_input=decoder_input,
             labels=labels,
             inference_params=inference_params,
-            extra_block_kwargs={"context": context, "context_mask": context_mask},
+            extra_block_kwargs={"context": context, "context_mask": context_mask,},
         )
 
     def sharded_state_dict(

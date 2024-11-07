@@ -6,22 +6,19 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Any, DefaultDict, Union
 
 from ..mapping import CheckpointingException, ShardedStateDict, StateDict
 from .async_utils import AsyncCallsQueue, AsyncRequest
 
 
 class StrategyAction(Enum):
-    """Specifies save vs load and sharded vs common action."""
-
     LOAD_COMMON = 'load_common'
     LOAD_SHARDED = 'load_sharded'
     SAVE_COMMON = 'save_common'
     SAVE_SHARDED = 'save_sharded'
 
 
-default_strategies: DefaultDict[str, dict[tuple, Any]] = defaultdict(dict)
+default_strategies = defaultdict(dict)
 
 async_calls = AsyncCallsQueue()
 
@@ -31,21 +28,14 @@ def get_default_strategy(action: StrategyAction, backend: str, version: int):
     try:
         if backend == 'zarr':
             error_hint = ' Please install `zarr` and `tensorstore<=0.1.45` packages'
-            from .tensorstore import register_default_tensorstore_strategies
-
-            register_default_tensorstore_strategies()
-            from .zarr import register_default_zarr_strategies
-
-            register_default_zarr_strategies()
+            from .tensorstore import _import_trigger
+            from .zarr import _import_trigger
         elif backend == 'torch_dist':
             error_hint = ' Please use PyTorch version >=2.1'
-            from .torch import register_default_torch_strategies
-
-            register_default_torch_strategies()
+            from .torch import _import_trigger
     except ImportError as e:
         raise CheckpointingException(
-            f'Cannot import a default strategy for: {(action.value, backend, version)}. '
-            f'Error: {e}. Hint: {error_hint}'
+            f'Cannot import a default strategy for: {(action.value, backend, version)}. Error: {e}. Hint: {error_hint}'
         ) from e
     try:
         return default_strategies[action.value][(backend, version)]
@@ -55,35 +45,15 @@ def get_default_strategy(action: StrategyAction, backend: str, version: int):
         ) from e
 
 
-def register_default_strategy(
-    action: StrategyAction,
-    backend: str,
-    version: int,
-    strategy: Union['SaveStrategyBase', 'LoadStrategyBase'],
-):
-    """Adds a given strategy to the registry of default strategies.
-
-    Args:
-        action (StrategyAction): specifies save/load and sharded/common
-        backend (str): backend that the strategy becomes a default for
-        version (int): version that the strategy becomes a default for
-        strategy (SaveStrategyBase, LoadStrategyBase): strategy to register
-    """
-    default_strategies[action.value][(backend, version)] = strategy
-
-
 class LoadStrategyBase(ABC):
-    """Base class for a load strategy. Requires implementing checks for compatibility with a
-    given checkpoint version."""
+    """Base class for a load strategy. Requires implementing checks for compatibility with a given checkpoint version."""
 
     @abstractmethod
-    def check_backend_compatibility(self, loaded_backend):
-        """Verifies if this strategy is compatible with `loaded_backend`."""
+    def check_backend_compatibility(self, loaded_version):
         raise NotImplementedError
 
     @abstractmethod
     def check_version_compatibility(self, loaded_version):
-        """Verifies if this strategy is compatible with `loaded_version`."""
         raise NotImplementedError
 
     @property
@@ -93,8 +63,7 @@ class LoadStrategyBase(ABC):
 
 
 class SaveStrategyBase(ABC):
-    """Base class for a save strategy. Requires defining a backend type and
-    version of the saved format."""
+    """Base class for a save strategy. Requires defining a backend type and version of the saved format."""
 
     def __init__(self, backend: str, version: int):
         self.backend = backend
@@ -114,18 +83,15 @@ class LoadCommonStrategy(LoadStrategyBase):
 
     @abstractmethod
     def load_common(self, checkpoint_dir: Path):
-        """Load common part of the checkpoint."""
         raise NotImplementedError
 
     @abstractmethod
     def load_sharded_objects(
         self, sharded_objects_state_dict: ShardedStateDict, checkpoint_dir: Path
     ):
-        """Load sharded objects from the checkpoint."""
         raise NotImplementedError
 
     def load_sharded_metadata(self, checkpoint_dir: Path) -> ShardedStateDict:
-        """Load just the metadata from the checkpoint."""
         if not self.can_handle_sharded_objects:
             return {}
         raise NotImplementedError
@@ -136,7 +102,6 @@ class LoadShardedStrategy(LoadStrategyBase):
 
     @abstractmethod
     def load(self, sharded_state_dict: ShardedStateDict, checkpoint_dir: Path):
-        """Load the sharded part of the checkpoint."""
         raise NotImplementedError
 
     @abstractmethod
@@ -175,13 +140,11 @@ class SaveCommonStrategy(SaveStrategyBase):
 
     @abstractmethod
     def save_common(self, common_state_dict: StateDict, checkpoint_dir: Path):
-        """Save common part of the state dict."""
         raise NotImplementedError
 
     def save_sharded_objects(
         self, sharded_objects_state_dict: ShardedStateDict, checkpoint_dir: Path
     ):
-        """Save sharded objects from the state dict."""
         raise NotImplementedError
 
 
@@ -190,7 +153,6 @@ class SaveShardedStrategy(SaveStrategyBase):
 
     @abstractmethod
     def save(self, sharded_state_dict: ShardedStateDict, checkpoint_dir: Path):
-        """Save the sharded part of the state dict."""
         raise NotImplementedError
 
 

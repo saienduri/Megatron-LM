@@ -8,8 +8,7 @@ class RMSNorm(torch.nn.Module):
     def __init__(self,
                  dim: int,
                  eps: float = 1e-6,
-                 sequence_parallel: bool = False,
-                 config: dict = None):
+                 sequence_parallel: bool = False):
         """RMS Normaliation module
 
         Args:

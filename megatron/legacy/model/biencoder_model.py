@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 import os
 import torch
 import sys
@@ -212,7 +211,7 @@ class BiEncoderModel(MegatronModule):
             state_dict = torch.load(checkpoint_name, map_location='cpu')
             sys.modules.pop('fp16.loss_scaler', None)
             sys.modules.pop('megatron.fp16.loss_scaler', None)
-        except Exception:
+        except BaseException:
             print_rank_0('could not load the BERT checkpoint')
             sys.exit()
 

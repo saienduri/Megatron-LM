@@ -5,7 +5,6 @@
 
 import torch
 
-from megatron.core import parallel_state
 from megatron.core import mpu
 
 
@@ -142,15 +141,10 @@ def copy_from_last_to_first_pipeline_stage(size, dtype, tensor=None):
 
 
 
-def broadcast_tensor(size, dtype, tensor=None, rank=0, data_parallel=False):
-    """Given size and type of a tensor on all ranks and the tensor value
-    only on a specific rank, broadcast from that rank to all other ranks.
-
-    Args:
-        data_parallel (bool): Broadcast across a single data parallel model replica.
+def broadcast_tensor(size, dtype, tensor=None, rank=0):
+    """ Given size and type of a tensor on all ranks and the tensor value
+        only on a specific rank, broadcast from that rank to all other ranks.
     """
-    if data_parallel:
-        rank = parallel_state.get_tensor_model_parallel_src_rank()
 
     if torch.distributed.get_rank() == rank:
         _is_cuda_contiguous(tensor)
@@ -159,58 +153,33 @@ def broadcast_tensor(size, dtype, tensor=None, rank=0, data_parallel=False):
                              dtype=dtype,
                              device=torch.cuda.current_device())
 
-    group = None
-    if data_parallel:
-        group = parallel_state.get_tensor_model_parallel_group()
-
-    torch.distributed.broadcast(tensor, rank, group=group)
+    torch.distributed.broadcast(tensor, rank)
 
     return tensor
 
 
 
-def broadcast_list(size, dtype, list_values=None, rank=0, data_parallel=False):
-    """Broadcast a list of values with a given type.
-
-    Args:
-        data_parallel (bool): Broadcast across a single data parallel model replica.
-    """
+def broadcast_list(size, dtype, list_values=None, rank=0):
+    """Broadcast a list of values with a given type."""
 
     tensor = None
+    if torch.distributed.get_rank() == rank:
+        tensor = torch.tensor(list_values, dtype=dtype,
+                              device=torch.cuda.current_device())
 
-    if data_parallel:
-        src_rank = parallel_state.get_data_parallel_src_rank()
-        if src_rank == 0:
-            tensor = torch.tensor(list_values, dtype=dtype,
-                                  device=torch.cuda.current_device())
-
-        rank = parallel_state.get_tensor_model_parallel_src_rank()
-    else:
-        if torch.distributed.get_rank() == rank:
-            tensor = torch.tensor(list_values, dtype=dtype,
-                                  device=torch.cuda.current_device())
-
-    return broadcast_tensor(size, dtype, tensor=tensor, rank=rank, data_parallel=data_parallel)
+    return broadcast_tensor(size, dtype, tensor=tensor, rank=rank)
 
 
 
-def broadcast_int_list(size, int_list=None, rank=0, data_parallel=False):
-    """Broadcast a list of integer values.
+def broadcast_int_list(size, int_list=None, rank=0):
+    """Broadcast a list of interger values."""
 
-    Args:
-        data_parallel (bool): Broadcast across a single data parallel model replica.
-    """
-
-    return broadcast_list(size, torch.int64, list_values=int_list, rank=rank, data_parallel=data_parallel)
+    return broadcast_list(size, torch.int64, list_values=int_list, rank=rank)
 
 
 
-def broadcast_float_list(size, float_list=None, rank=0, data_parallel=False):
-    """Broadcast a list of float values.
-
-    Args:
-        data_parallel (bool): Broadcast across a single data parallel model replica.
-    """
+def broadcast_float_list(size, float_list=None, rank=0):
+    """Broadcast a list of float values."""
 
     return broadcast_list(size, torch.float32, list_values=float_list,
-                          rank=rank, data_parallel=data_parallel)
+                          rank=rank)

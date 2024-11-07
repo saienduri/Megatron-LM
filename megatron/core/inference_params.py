@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 class InferenceParams:
     """Inference parameters that are passed to the main model in order
     to efficienly calculate and store the context during inference."""

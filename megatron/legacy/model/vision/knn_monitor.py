@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 import torch.nn.functional as F
 import torch
 from megatron.training import print_rank_0, get_args

@@ -1,15 +1,18 @@
 # Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
 import argparse
+import glob
 import json
 
-from evaluate_mmmu import get_input_output_paths
 from pycocoevalcap.eval import COCOEvalCap
 from pycocotools.coco import COCO
 
 
 def convert_to_coco_format(input_path):
     """Convert input files to COCO compatible format."""
-    input_file_paths, output_file_path = get_input_output_paths(input_path, task="captioning")
+    output_file_path = input_path + "-captioning-merged.json"
+
+    pattern = input_path + "-captioning-[0-9].*jsonl"
+    input_file_paths = glob.glob(pattern)
 
     captions = []
 

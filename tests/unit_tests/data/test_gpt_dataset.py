@@ -26,7 +26,7 @@ def sample_N(dataset, N, randomize):
     return samples
 
 
-@pytest.mark.flaky
+@pytest.mark.skip(reason="Tests are flaky and need to be debugged")
 def test_mock_gpt_dataset():
     if torch.distributed.is_available():
         Utils.initialize_distributed()

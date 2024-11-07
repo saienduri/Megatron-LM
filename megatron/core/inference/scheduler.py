@@ -1,8 +1,7 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 import time
 import typing
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, List
 
 import torch
 
@@ -12,16 +11,14 @@ from megatron.core.inference.utils import Counter
 
 
 class Scheduler:
-    """Scheduler for handling requests to inference engine
-
-    This class is responsible for handing of all the incomign requests
-
-    Args:
-        max_batch_size (int): The max batch size that we can pass to the
-            inference engine at a time.
-    """
-
     def __init__(self, max_batch_size: int):
+        """Scheduler for handling requests to inference engine
+
+        This class is responsible for handing of all the incomign requests
+
+        Args:
+            max_batch_size (int): The max batch size that we can pass to the inference engine at a time.
+        """
         self.max_batch_size = max_batch_size
         self.active_request_pool: Dict[int, InferenceRequest] = OrderedDict()
         self.waiting_request_pool: Dict[int, InferenceRequest] = OrderedDict()
@@ -32,19 +29,16 @@ class Scheduler:
         self,
         prompt: str,
         prompt_tokens: torch.Tensor,
-        encoder_prompt: str = None,
-        inference_parameters: CommonInferenceParams = None,
+        inference_parameters: CommonInferenceParams,
         arrival_time: float = None,
     ):
         """Add an incoming request
 
-        This method will add the request to either the active pool or the waiting pool
-        depending on the batch size.
+        This method will add the request to either the active pool or the waiting pool depending on the batch size.
 
         Args:
             prompt (str): Input prompt string
             prompt_tokens (torch.Tensor): A torch tensor having the input prompts tokenized
-            encoder_prompt (str): Encoder input string
             inference_parameters (CommonInferenceParams): The inference parameters
             arrival_time (float, optional): The incoming request time. Defaults to None.
         """
@@ -66,7 +60,6 @@ class Scheduler:
             arrival_time=arrival_time,
             prompt_tokens=prompt_tokens,
             status=status,
-            encoder_prompt=encoder_prompt,
         )
 
         if status == status.ACTIVE_BUT_NOT_GENERATING_TOKENS:
@@ -85,31 +78,27 @@ class Scheduler:
     def add_earliest_waiting_request_to_active_pool(self):
         """Utility to add the waiting request to active pool
 
-        This method will add the earliest request (FIFO) that is in the waiting request
-        pool to the active request pool.
+        This method will add the earliest request (FIFO) that is in the waiting request pool to the active request pool.
         """
         assert (
             len(self.active_request_pool) < self.max_batch_size
         ), "Active request pool is already full. Cant add any more requests"
         if len(self.waiting_request_pool) > 0:
-            (earliest_waiting_request_request_id, earliest_waiting_request) = (
-                self.waiting_request_pool.popitem(last=False)
-            )
+            (
+                earliest_waiting_request_request_id,
+                earliest_waiting_request,
+            ) = self.waiting_request_pool.popitem(last=False)
             earliest_waiting_request.status = Status.ACTIVE_BUT_NOT_GENERATING_TOKENS
             self.active_request_pool[earliest_waiting_request_request_id] = earliest_waiting_request
 
     def update_requests_pools(self, result_dict: typing.OrderedDict[int, InferenceRequest] = None):
         """Update request pool status
 
-        This method will full up the active request pool, if it has less than max batch size
-        elements from the waiting request pool.
-        If provided with a request dict, it will put the completed requests into the completed
-        request pool and add waiting request into active pool.
+        This method will full up the active request pool, if it has less than max batch size elements from the waiting request pool.
+        If provided with a request dict, it will put the completed requests into the completed request pool and add waiting request into active pool.
 
         Args:
-            result (typing.OrderedDict[int, InferenceRequest], optional): The result returned
-                by the engine. A dictionary with keys as the request ids, and values as the
-                requests. Defaults to None
+            result (typing.OrderedDict[int, InferenceRequest], optional): The result returned by the engine. A dictionary with keys as the request ids, and values as the requests. Defaults to None
         """
         for result_request_id in list(result_dict.keys()):
             active_request = self.active_request_pool[result_request_id]

@@ -1,17 +1,14 @@
 ## Quick Start
+The following guide will show you how to quickly get started with Megatron Core. It will show you the following
+* We will initalize megatron core on 2 GPUS. 
+* We will build a GPT model with tensor model parallel size 2, pipeline parallel size 1
+* We will train it for a few iterations using megatron core schedules
+* We will save the model using the distributed checkpointing format
+* We will load the model saved above. 
 
-The following guide is a short getting started guide for Megatron Core. In it you:
-
-* Initialize Megatron Core on 2 GPUS. 
-* Build a GPT model with tensor model parallel size 2, pipeline parallel size 1
-* Train it for a five iterations using Megatron Core schedules
-* Save the model using the distributed checkpointing format
-* Load the model saved above. 
-
-**NOTE:** The following sample was tested using Megatron Core version 0.8.0 and NGC PyTorch Container version 24.02. 
+*NOTE: The following has been testing for megatron core version 0.8.0 and NGC Pytorch Container version 24.02
 
 ### Environment Setup
-
 ```
 docker run --ipc=host --shm-size=512m --gpus 2 -it nvcr.io/nvidia/pytorch:24.02-py3
 
@@ -20,24 +17,19 @@ git clone https://github.com/NVIDIA/Megatron-LM.git && cd Megatron-LM
 <br>
 
 ### Writing Your First Training Loop
-
-In the following steps you create a sample GPT model split across tensors (Tensor model parallel) on 2 GPUS, and run a forward pass through it using a MockGPT dataset helper class that we created in Megatron Core. 
+The following steps will walk you through how you can create a sample GPT model split across tensors (Tensor model parallel ) on 2 GPUS, and run a forward pass through it using a MockGPT dataset helper class that we created in Megatron core. 
 
 <br>
 
-**NOTE:** All of the following steps are in the [run_simple_mcore_train_loop.py](https://github.com/NVIDIA/Megatron-LM/tree/main/examples/run_simple_mcore_train_loop.py) script.
-
-To run the ``run_simple_mcore_train_loop.py`` script:
-
+**NOTE: All of the following steps are already put into a script [run_simple_mcore_train_loop.py](https://github.com/NVIDIA/Megatron-LM/tree/main/examples/run_simple_mcore_train_loop.py) which you can run as follows** 
 ```
 PYTHONPATH=$PYTHON_PATH:./megatron torchrun --nproc-per-node 2 examples/run_simple_mcore_train_loop.py
 ```
 
 <br>
 
-**STEP 1 - Initialize Distributed Training and Model Parallel Setup**
-
-The following utility, when called, initializes your distributed setup. 
+**STEP 1 - Initialize Distributed Training and Model parallel setup**
+The following utility when called initalizes your distributed setup. 
 
 ```python
 import os
@@ -57,9 +49,7 @@ def initialize_distributed(tensor_model_parallel_size = 1, pipeline_model_parall
 <br>
 
 **STEP 2 - GPT Model Setup**
-
-In this step, you create a GPT model. For a list of other configurations that you can pass into the model open and review [transformer_config.py](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/transformer/transformer_config.py).
-
+The following step shows you how you can quickly create a GPT model. For a list of other configs that you can pass into the model look into [transformer_config.py](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/transformer/transformer_config.py)
 ```
 from megatron.core.transformer.transformer_config import TransformerConfig
 from megatron.core.models.gpt.gpt_model import GPTModel
@@ -85,13 +75,10 @@ def model_provider():
 ```
 <br>
 
-**STEP 3 - GPT Mock Dataset Setup**
+**STEP 3 - GPT Mock dataset setup**
+The following shows you how you can quickly get started with a mock dataset utility we created. In order to train with your data, please use the actual GPTDataset class in [gpt_dataset.py](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/datasets/gpt_dataset.py)
 
-In the following step, you explore the mock dataset utility.
-
-* To train the model using your data, use the GPTDataset class in [gpt_dataset.py](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/datasets/gpt_dataset.py).
-
-* To find more information about Megatron Core data pipeline, see the [data pipeline readme.md](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/datasets/readme.md?ref_type=heads).
+To find more information about megatron core data pipeline please refer to [this](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/datasets/readme.md?ref_type=heads)
 
 ```
 import torch
@@ -135,8 +122,7 @@ def get_train_data_iterator():
 <br>
 
 **STEP 4 - Forward Step Function**
-
-Megatron Core uses [schedules.py](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/pipeline_parallel/schedules.py) to run the model. It is sufficient to define a forward step function, which takes as input the data iterator and the model and produces as output the output tensor and a loss function.
+In megatron core, we use [schedules.py](https://github.com/NVIDIA/Megatron-LM/tree/main/megatron/core/pipeline_parallel/schedules.py) to run the model. So it is sufficient to define a forward step function which takes as input the data iterator and the model and produces as output the output tensor and a loss function 
 
 ```python
 from functools import partial
@@ -168,8 +154,7 @@ def forward_step_func(data_iterator, model):
 <br>
 
 **STEP 5 - Load and Save Distributed Checkpoint**
-
-Megatron Core uses distributed checkpoints for loading and saving models. This gives you the flexibility to convert the model from one model parallel setting to another when you load a model. For example, a model trained with tensor parallel size 2, can be loaded again as tensor model parallel size 4, and so forth.
+Megatron core uses distributed checkpoint for loading and saving model. This gives you the flexiblity to convert model from one model parallel setting to another when you load a model (i.e A model trained with tensor parallel size 2, can now be loaded as tensor model parallel size 4 etc.)
 
 ```python
 from megatron.core import dist_checkpointing
@@ -187,8 +172,7 @@ def load_distributed_checkpoint(checkpoint_path, gpt_model):
 <br>
 
 **STEP 6 - Main Function**
-
-The following code snippet is the main function that needs to go into your script. It runs the model for 5 iterations, saves the model, and loads the data model.  
+The following is the main function that needs to go into your script. 
 
 ```python
 from pathlib import Path
@@ -241,10 +225,4 @@ if __name__ == "__main__":
 
 
 ### Extending Further
-
-The example you explored here is a basic training loop in Megatron Core. To review more advanced examples, explore [pretrain_gpt.py]. ``pretrain_gpt.py`` has more complex training loops that includes the following and other Megatron Core features:
-
-* pipeline parallel
-* context parallel
-* rope embeddings
-* mixture of experts
+The above example introduced you to a basic training loop in MCore. To see more advanced examples please look at [pretrain_gpt.py]. That will show you how you can write more complex training loops, involving pipeline parallel, context parallel, rope embeddings, mixture of experts and all other functionalities present in mcore. 

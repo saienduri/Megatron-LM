@@ -26,7 +26,7 @@ from megatron.core.transformer.transformer_config import TransformerConfig
 from tests.unit_tests.test_utilities import Utils
 
 
-class TestSimpleTextGenerationController:
+class TestTextGenerationController:
 
     def setup_method(self, method):
         Utils.initialize_model_parallel(

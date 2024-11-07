@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 import torch.nn.functional as F
 
-from megatron.core.transformer import TransformerConfig, MLATransformerConfig
+from megatron.core.transformer import TransformerConfig
 
 # Taken from https://stackoverflow.com/questions/65414773/parse-environment-variable-from-yaml-with-pyyaml
 # Allows for yaml to use environment variables
@@ -442,10 +442,7 @@ def core_transformer_config_from_yaml(args, transfomer_key = "language_model"):
         kw_args['scaled_init_method'] = torch.nn.init.xavier_uniform_
     
     # Return Transformer config.
-    if getattr(args, "multi_latent_attention", False):
-        return MLATransformerConfig(**kw_args)
-    else:
-        return TransformerConfig(**kw_args)
+    return TransformerConfig(**kw_args)
 
 def load_yaml(yaml_path):
     print(f"warning using experimental yaml arguments feature, argparse arguments will be ignored")

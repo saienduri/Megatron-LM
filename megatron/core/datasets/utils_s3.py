@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 import os
 from typing import Any, Dict, NamedTuple, Protocol, Tuple
 

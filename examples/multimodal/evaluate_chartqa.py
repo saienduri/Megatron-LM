@@ -1,13 +1,16 @@
 import argparse
+import glob
 import json
 
-from evaluate_mmmu import get_input_output_paths
 from evaluate_vqav2 import compute_vqa_accuracy
 
 
 def merge_input_files(input_path):
     """Merge input files to a format compatible with the evaluator."""
-    input_file_paths, output_file_path = get_input_output_paths(input_path, task="ChartQA")
+    output_file_path = input_path + "-ChartQA-merged.json"
+
+    pattern = input_path + "-ChartQA-[0-9].*jsonl"
+    input_file_paths = glob.glob(pattern)
 
     results = []
 
@@ -28,7 +31,7 @@ def merge_input_files(input_path):
 def chartqa_eval(input_path):
     """Run ChartQA evaluation."""
     result_file_path = merge_input_files(input_path)
-    return compute_vqa_accuracy(result_file_path, use_chartqa_metric=True)
+    compute_vqa_accuracy(result_file_path, use_chartqa_metric=True)
 
 
 if __name__ == "__main__":
@@ -36,6 +39,4 @@ if __name__ == "__main__":
     parser.add_argument('--input-path', type=str, help="Path to input file(s)")
     args = parser.parse_args()
 
-    avg_acc = chartqa_eval(args.input_path)
-
-    print(f"ChartQA accuracy: {avg_acc:.2f}")
+    chartqa_eval(args.input_path)

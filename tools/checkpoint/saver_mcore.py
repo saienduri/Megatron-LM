@@ -3,10 +3,11 @@
 import os
 import sys
 import torch
+from importlib.metadata import version
+from pkg_resources import packaging
 
 from setter import ModelSetter
 from utils import get_mcore_transformer_block_key, print_memory_usage
-from megatron.core.utils import get_te_version, is_te_min_version
 
 
 class MCoreSetter(ModelSetter):
@@ -287,8 +288,9 @@ def add_arguments(parser):
 def save_checkpoint(queue, args):
 
     # Transformer engine >= 0.12.0, for CPU initialization.
-    assert is_te_min_version("0.12.0"), \
-        "transformer engine version: %s (>=0.12.0 required)." % get_te_version()
+    te_version = packaging.version.Version(version("transformer-engine"))
+    assert te_version >= packaging.version.Version("0.12.0"), \
+        "transformer engine version: %s (>=0.12.0 required)." % te_version
 
     # Search in directory above this
     sys.path.append(os.path.abspath(

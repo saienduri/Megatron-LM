@@ -59,7 +59,10 @@ class _ShardedTensorMetadata:
 
 
 def sharded_tensor_chunk_id(sharded_tensor: ShardedTensor):
-    return (sharded_tensor.key, sharded_tensor.global_offset)
+    return (
+        sharded_tensor.key,
+        sharded_tensor.global_offset,
+    )
 
 
 class TwoStageDataParallelLoadShardedStrategy(LoadShardedStrategy):
@@ -174,7 +177,7 @@ class TwoStageDataParallelLoadShardedStrategy(LoadShardedStrategy):
 
     @timed()
     def deduplicate_chunks(self, ten_metas: List[_ShardedTensorMetadata]):
-        """Group tensors by chunk and then pick the tensor with the lowest rank.
+        """ Group tensors by chunk and then pick the tensor with the lowest rank.
 
         NOTE: with proper loading overlap, loading from randomized ranks
          (instead of the smallest one) could be beneficial here.

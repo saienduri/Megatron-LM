@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 from abc import ABC, abstractmethod
 from typing import List
 

@@ -1,4 +1,3 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 # coding=utf-8
 # Copyright 2018 The Google AI Language Team Authors, and NVIDIA.
 #

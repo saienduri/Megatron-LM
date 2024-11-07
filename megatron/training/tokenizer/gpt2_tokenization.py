@@ -213,7 +213,7 @@ class GPT2Tokenizer(object):
                     j = word.index(first, i)
                     new_word.extend(word[i:j])
                     i = j
-                except Exception:
+                except BaseException:
                     new_word.extend(word[i:])
                     break
 
