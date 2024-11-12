@@ -1,5 +1,4 @@
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
-import pytest
 from megatron.core.inference.modelopt_support.gpt.model_specs import get_gpt_layer_modelopt_spec
 from megatron.core.inference.modelopt_support.gpt.state_dict_hooks import (
     mcore_gpt_load_te_state_dict_pre_hook,
@@ -33,7 +32,6 @@ class TestModelOptGPTModel:
             max_sequence_length=4,
         )
 
-    @pytest.mark.failing_on_rocm_mi250
     def test_load_te_state_dict_pre_hook(self):
         handle = self.modelopt_gpt_model._register_load_state_dict_pre_hook(
             mcore_gpt_load_te_state_dict_pre_hook
