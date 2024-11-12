@@ -1,70 +1,146 @@
+Here is the reformatted README file for Llama2/Llama3 model pretraining instructions:
 
-Llama2/Llama3 Model pretraining instruction 
+---
 
-1. Environment setup 
-   
-   download docker image: xxxxx
-   launch docker container: xxxx
+# Llama2/Llama3 Model Pretraining Instructions
 
-2. Configurations in script (Megatron/examples/llama)
-   
-   -- network interface: change "ens50f0np0" to your system network interface, by running "ip a"  
-      export NCCL_SOCKET_IFNAME=ens50f0np0  
-      export GLOO_SOCKET_IFNAME=ens50f0np0 
+This guide provides the steps for setting up the environment and configuring the script to train Llama2 or Llama3 models.
 
-   -- dataset: you can use both mock data and real data
-      mock data: replace --data-path $DATA_PATH \ by --mock-data \
-      real data: change the data path accordingly 
-           DATA_DIR="/root/.cache/data"  # change to where the dataset is stored
-           DATA_PATH=${DATA_DIR}/bookcorpus_text_sentence
+---
 
-   -- Tokenizer: HuggingFaceTokenizer, Llama2Tokenizer
-      
-      for Llama2 training, we use Llama2Tokenizer
-      
-      for Llama3 training, we use HuggingFaceTokenizer, set huggingface model link in TOKENIZER_MODEL as below
-      
-      TOKENIZER_MODEL=meta-llama/Llama-3.1-8B #llama3      
+## 1. Environment Setup
 
-   -- multi-node training: 
-        MASTER_ADDR="${MASTER_ADDR:-localhost}" : change localhost to master node name
-        NNODES="${NNODES:-1}" : change to # of nodes you want to train on, 2, 4, 8, etc. 
-        NODE_RANK="${NODE_RANK:-0}" : change to the rank number of each node, 0, 1, 2, .. NNODES-1
+1. **Download Docker Image**  
+   Download the Docker image required for training:  
+   `docker pull <image_name>`
 
+2. **Launch Docker Container**  
+   Start the Docker container:  
+   `docker run -it --gpus all --rm <image_name>`
 
-3. How to run 
+---
 
-   --single node training: 
-   TEE_OUTPUT=1 MBS=5 BS=120 TP=8 TE_FP8=0 NO_TORCH_COMPILE=1 SEQ_LENGTH=4096 bash train_llama2.sh
-   Sample output:
-   ![alt text](image.png)
+## 2. Configurations in Script (`Megatron/examples/llama`)
 
+### 2.1 Network Interface
+Update the network interface in the script to match your system’s network interface.  
+To find your network interface, run:  
+```bash
+ip a
+```
+Then, update the following variables in the script:  
+```bash
+export NCCL_SOCKET_IFNAME=ens50f0np0
+export GLOO_SOCKET_IFNAME=ens50f0np0
+```
 
-   --multi node training: 
-   Launch the same docker container on each node (2, 4, etc.)
-   run the training script on each node inside the container, start from master node, then slave node
-   master: TEE_OUTPUT=1 MBS=4 BS=64 TP=8 TE_FP8=0 NO_TORCH_COMPILE=1 SEQ_LENGTH=4096 bash train_llama2.sh
-   slave:  TEE_OUTPUT=1 MBS=4 BS=64 TP=8 TE_FP8=0 NO_TORCH_COMPILE=1 SEQ_LENGTH=4096 bash train_llama2.sh 
-   Sample output (2-node):
-      master node: 
-      ![alt text](image-1.png)
-      slave node:
-      ![alt text](image-3.png)
-   
+### 2.2 Dataset
+You can use either mock data or real data for training.
 
-4. Pay attention to key variables  
-   -- TE_FP8: 0 - BP16, 1: FP8
-   -- GEMM_TUNING: 1 - enable gemm tuning, which will boost performance by leveraging best gemm kernels
-   -- USE_FLASH_ATTN: 1 to enable flash attention
-   -- ENABLE_PROFILING : 1 to enable pytorch profiling for performance analysis 
-   -- transformer-impl=transformer_engine : using transformer engine(TE), can set to local if you want to disable TE
-   -- MODEL_SIZE: 7B, 70B for llama2, 8B, 70B for llama3/3.1 
-   -- TOTAL_ITERS: 10 - total # of iterations 
+- **Mock Data:**  
+  Replace the data path as follows:
+  ```bash
+  --data-path $DATA_PATH \ 
+  --mock-data
+  ```
 
+- **Real Data:**  
+  Update the `DATA_PATH` to the location where your dataset is stored:
+  ```bash
+  DATA_DIR="/root/.cache/data"  # Change to where your dataset is stored
+  DATA_PATH=${DATA_DIR}/bookcorpus_text_sentence
+  ```
 
-   
+### 2.3 Tokenizer
 
-    
-      
-   
+- **For Llama2 Training:**  
+  Use the `Llama2Tokenizer`.
 
+- **For Llama3 Training:**  
+  Use the `HuggingFaceTokenizer`. Set the HuggingFace model link in the `TOKENIZER_MODEL` variable:
+  ```bash
+  TOKENIZER_MODEL=meta-llama/Llama-3.1-8B  # For Llama3
+  ```
+
+### 2.4 Multi-node Training
+If you're running multi-node training, update the following environment variables:
+
+- **Master Address:**  
+  Change `localhost` to the master node's hostname:
+  ```bash
+  MASTER_ADDR="${MASTER_ADDR:-localhost}"
+  ```
+
+- **Number of Nodes:**  
+  Set the number of nodes you want to train on (e.g., 2, 4, 8):
+  ```bash
+  NNODES="${NNODES:-1}"
+  ```
+
+- **Node Rank:**  
+  Set the rank of each node (0 for master, 1 for the first slave node, etc.):
+  ```bash
+  NODE_RANK="${NODE_RANK:-0}"
+  ```
+
+---
+
+## 3. How to Run
+
+### 3.1 Single Node Training
+To run the training on a single node, use the following command:
+```bash
+TEE_OUTPUT=1 MBS=5 BS=120 TP=8 TE_FP8=0 NO_TORCH_COMPILE=1 SEQ_LENGTH=4096 bash train_llama2.sh
+```
+Sample output:
+![alt text](image.png)
+
+### 3.2 Multi-node Training
+To run training on multiple nodes, launch the Docker container on each node. Follow these steps:
+
+- **On the Master Node:**
+  ```bash
+  TEE_OUTPUT=1 MBS=4 BS=64 TP=8 TE_FP8=0 NO_TORCH_COMPILE=1 SEQ_LENGTH=4096 bash train_llama2.sh
+  ```
+
+- **On the Slave Node(s):**
+  ```bash
+  TEE_OUTPUT=1 MBS=4 BS=64 TP=8 TE_FP8=0 NO_TORCH_COMPILE=1 SEQ_LENGTH=4096 bash train_llama2.sh
+  ```
+
+Sample output for 2-node training:
+
+- **Master Node:**
+  ![alt text](image-1.png)
+
+- **Slave Node:**
+  ![alt text](image-3.png)
+
+---
+
+## 4. Key Variables to Pay Attention To
+
+- **TE_FP8:**  
+  `0` for BP16 (default), `1` for FP8.
+
+- **GEMM_TUNING:**  
+  `1` to enable GEMM tuning, which boosts performance by using the best GEMM kernels.
+
+- **USE_FLASH_ATTN:**  
+  `1` to enable Flash Attention.
+
+- **ENABLE_PROFILING:**  
+  `1` to enable PyTorch profiling for performance analysis.
+
+- **transformer-impl:**  
+  `transformer_engine` to use the Transformer Engine (TE). Set to `local` if you want to disable TE.
+
+- **MODEL_SIZE:**  
+  Set to `7B` or `70B` for Llama2, or `8B` or `70B` for Llama3/3.1.
+
+- **TOTAL_ITERS:**  
+  Set the total number of iterations (default: 10).
+
+--- 
+
+That's it! You've now set up the environment and configured the necessary settings for training Llama2 or Llama3 models.
