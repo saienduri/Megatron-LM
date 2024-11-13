@@ -2,7 +2,7 @@
 
 # Based on https://github.com/AMD-AIG-AIMA/AMD-Megatron-LM/blob/core0.8.0_guihong/train_acc_loss_llama3.sh
 
-set -x
+# set -x
 
 export GPU_MAX_HW_QUEUES=2
 export TORCH_NCCL_HIGH_PRIORITY=1
@@ -54,7 +54,7 @@ GPUS_PER_NODE=`python3 -c "import torch; print(torch.cuda.device_count())"`
 
 # Change for multinode config
 MASTER_ADDR="${MASTER_ADDR:-localhost}"
-MASTER_PORT="${MASTER_PORT:-23731}"
+MASTER_PORT="${MASTER_PORT:-23732}"
 NNODES="${NNODES:-1}"
 NODE_RANK="${NODE_RANK:-0}"
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
@@ -65,8 +65,9 @@ PP="${PP:-1}"
 PP_VP="${PP_VP:-None}"
 CP="${CP:-1}"
 MBS="${MBS:-1}"
-BS="${BS:-128}"
+GBS="${GBS:-128}"
 SEQ_LENGTH="${SEQ_LENGTH:-8192}"
+MAX_POSITION_EMBEDDINGS="${MAX_POSITION_EMBEDDINGS:-131072}"
 TOTAL_ITERS="${TOTAL_ITERS:-20}"
 SEQ_PARALLEL="${SEQ_PARALLEL:-1}" 
 CONTI_PARAMS="${CONTI_PARAMS:-0}"
@@ -90,15 +91,11 @@ elif [ $MODEL_SIZE = 70 ]; then
 TOKENIZER_MODEL=./tokenizers/Llama-3.1-70B
 fi
 
-
-# DATA_PATH=/billhe/oscar-dataset/oscar-en-10k_text_document
-# TOKENIZER_MODEL=/billhe/oscar-dataset/llama-tokenizer
-
-MAX_POSITION_EMBEDDINGS=262144
-
-DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_bs${BS}_tp${TP}_pp${PP}_cp${CP}_iter${TOTAL_ITERS}/nocompile${NO_TORCH_COMPILE}_TE_FP8_${TE_FP8}/${TIME_STAMP}"
+DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_gbs${GBS}_tp${TP}_pp${PP}_cp${CP}_iter${TOTAL_ITERS}_SL_${SEQ_PARALLEL}_AC_${AC}_DO_${DO}_FL_${FL}_TE_${TE}/nocompile${NO_TORCH_COMPILE}_TE_FP8_${TE_FP8}/${TIME_STAMP}"
 LOG_DIR="${LOG_DIR:-${DEFAULT_LOG_DIR}}"
 TRAIN_LOG="${LOG_DIR}/output_${EXP_NAME}.log"
+echo "Writing to LOG_DIR: ${LOG_DIR} ..."
+
 mkdir -p $LOG_DIR
 echo $TRAIN_LOG
 
@@ -156,7 +153,7 @@ GPT_ARGS="
     --hidden-dropout 0.0 \
     --normalization RMSNorm \
     --micro-batch-size $MBS \
-    --global-batch-size $BS \
+    --global-batch-size $GBS \
     --train-iters $TOTAL_ITERS \
     --no-async-tensor-model-parallel-allreduce \
     --bf16 \
