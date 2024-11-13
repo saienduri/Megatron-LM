@@ -54,7 +54,7 @@ GPUS_PER_NODE=`python3 -c "import torch; print(torch.cuda.device_count())"`
 
 # Change for multinode config
 MASTER_ADDR="${MASTER_ADDR:-localhost}"
-MASTER_PORT="${MASTER_PORT:-23732}"
+MASTER_PORT="${MASTER_PORT:-23733}"
 NNODES="${NNODES:-1}"
 NODE_RANK="${NODE_RANK:-0}"
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
@@ -79,6 +79,7 @@ AC=${AC:-sel}
 DO=${DO:-true}
 FL=${FL:-true}
 TE=${TE:-true}
+RECOMPUTE_NUM_LAYERS=${RECOMPUTE_NUM_LAYERS:-32}
 
 EXPERIMENT_DIR="experiment"
 mkdir -p $EXPERIMENT_DIR
@@ -95,6 +96,7 @@ DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL
 LOG_DIR="${LOG_DIR:-${DEFAULT_LOG_DIR}}"
 TRAIN_LOG="${LOG_DIR}/output_${EXP_NAME}.log"
 echo "Writing to LOG_DIR: ${LOG_DIR} ..."
+
 
 mkdir -p $LOG_DIR
 echo $TRAIN_LOG
@@ -224,9 +226,8 @@ EXTRA_ARGS="
     --overlap-grad-reduce \
 "
 
-
 if [ $AC = full ]; then
-    EXTRA_ARGS="$EXTRA_ARGS --recompute-method uniform --recompute-granularity full --recompute-num-layers 32"
+    EXTRA_ARGS="$EXTRA_ARGS --recompute-method uniform --recompute-granularity full --recompute-num-layers ${RECOMPUTE_NUM_LAYERS}"
 elif [ $AC = sel ]; then
     EXTRA_ARGS="$EXTRA_ARGS --recompute-activations"
 fi
