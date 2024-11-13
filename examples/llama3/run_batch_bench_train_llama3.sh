@@ -5,9 +5,9 @@ WORLD_SIZE=8
 SEQ_LENGTHS_arr=(8192 16384)
 TP_arr=(1 2 4 8)
 PP_arr=(1 2 4 8)
-DP_arr=(1 2 4 8)
+DP_arr=(8 4 2 1)
 CP_arr=(1 2 4 8)
-MBS_arr=(1 2 4 8)
+MBS_arr=(1 2 4 8 12 16 24 32)
 AC_arr=(none sel full)
 
 
@@ -46,7 +46,7 @@ for i in $(seq 0 $[${#SEQ_LENGTHS_arr[@]}-1]); do
                                 bash ./bench_train_llama3.sh
 
                                 wait
-                                sleep 10
+                                sleep 5
 
                             done
 
