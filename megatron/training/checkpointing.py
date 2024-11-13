@@ -762,7 +762,9 @@ def load_checkpoint(model, optimizer, opt_param_scheduler, load_arg='load', stri
         check_checkpoint_args(checkpoint_args)
         args.consumed_train_samples = getattr(checkpoint_args,
                                               'consumed_train_samples', 0)
-        update_num_microbatches(consumed_samples=args.consumed_train_samples)
+        args.skipped_train_samples = getattr(checkpoint_args,
+                                             'skipped_train_samples', 0)
+        update_num_microbatches(consumed_samples=args.consumed_train_samples, verbose=True)
         args.consumed_valid_samples = getattr(checkpoint_args,
                                               'consumed_valid_samples', 0)
     else:
