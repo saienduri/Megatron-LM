@@ -92,7 +92,7 @@ elif [ $MODEL_SIZE = 70 ]; then
 TOKENIZER_MODEL=./tokenizers/Llama-3.1-70B
 fi
 
-DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_gbs${GBS}_tp${TP}_pp${PP}_cp${CP}_iter${TOTAL_ITERS}_SL_${SEQ_PARALLEL}_AC_${AC}_DO_${DO}_FL_${FL}_TE_${TE}/nocompile${NO_TORCH_COMPILE}_TE_FP8_${TE_FP8}/${TIME_STAMP}"
+DEFAULT_LOG_DIR="${EXPERIMENT_DIR}/${NNODES}nodes_rank${NODE_RANK}_train_${MODEL_SIZE}B_mbs${MBS}_gbs${GBS}_seqlen${SEQ_LENGTH}_tp${TP}_pp${PP}_cp${CP}_iter${TOTAL_ITERS}_SL_${SEQ_PARALLEL}_AC_${AC}_DO_${DO}_FL_${FL}_TE_${TE}/nocompile${NO_TORCH_COMPILE}_TE_FP8_${TE_FP8}/${TIME_STAMP}"
 LOG_DIR="${LOG_DIR:-${DEFAULT_LOG_DIR}}"
 TRAIN_LOG="${LOG_DIR}/output_${EXP_NAME}.log"
 echo "Writing to LOG_DIR: ${LOG_DIR} ..."

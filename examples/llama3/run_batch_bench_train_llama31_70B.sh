@@ -2,7 +2,7 @@
 
 
 WORLD_SIZE=8
-SEQ_LENGTHS_arr=(8192 16384)
+SEQ_LENGTH_arr=(8192 16384)
 TP_arr=(8 )
 PP_arr=(1 )
 DP_arr=(1 )
@@ -22,8 +22,8 @@ export MOCK_DATA=1
 export RECOMPUTE_NUM_LAYERS=80
 
 
-for i in $(seq 0 $[${#SEQ_LENGTHS_arr[@]}-1]); do
-    export SEQ_LENGTHS=${SEQ_LENGTHS_arr[i]}
+for i in $(seq 0 $[${#SEQ_LENGTH_arr[@]}-1]); do
+    export SEQ_LENGTH=${SEQ_LENGTH_arr[i]}
     
     for j in $(seq 0 $[${#CP_arr[@]}-1]); do
         export CP=${CP_arr[j]}
