@@ -65,7 +65,7 @@ RUN git clone --recursive https://github.com/ROCmSoftwarePlatform/TransformerEng
 WORKDIR $WORKSPACE_DIR
 RUN git clone https://github.com/ROCm/Megatron-LM.git Megatron-LM &&\
     cd Megatron-LM &&\
-    git checkout hakiymaz/deepseekv2_enablement &&\
+    git checkout rocm_dev &&\
     pip install -e .
 
 WORKDIR $WORKSPACE_DIR/Megatron-LM
