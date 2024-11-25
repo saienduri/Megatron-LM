@@ -333,7 +333,7 @@ megatron_options="  \
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
-run_cmd="torchrun $DISTRIBUTED_ARGS /workspace/Megatron-LM/examples/deepseek_v2/pretrain_deepseek.py 
+run_cmd="torchrun $DISTRIBUTED_ARGS examples/deepseek_v2/pretrain_deepseek.py 
  ${megatron_options} ${pr_options} ${load_options} ${activation_checkpoint_options} \
  ${do_options} ${sp_options} ${moe_options} ${offload_option} ${sft_option} ${vp_options} ${flash_options}"
 
