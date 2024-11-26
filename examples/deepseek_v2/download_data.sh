@@ -1,4 +1,9 @@
 #!/bin/bash
+###############################################################################
+# Copyright (c) 2024, Advanced Micro Devices, Inc. All rights reserved.
+#
+# See LICENSE for license information.
+#################################################################################
 EXPERIMENT_DIR="experiment"
 export EXPERIMENT_DIR
 mkdir -p $EXPERIMENT_DIR
