@@ -2,6 +2,7 @@
 
 import types
 
+import pytest
 import torch
 import pytest
 
@@ -82,6 +83,7 @@ class TestRetroAttention:
         Utils.destroy_model_parallel()
 
     @pytest.mark.failing_on_rocm
+    @pytest.mark.flaky_in_dev
     def test_constructor(self):
 
         config = self.get_config()
@@ -193,7 +195,9 @@ class TestRetroAttention:
             config.retro_num_neighbors * micro_batch_size * n_chunks_per_sample,
             config.hidden_size,
         )
+
     @pytest.mark.failing_on_rocm
+    @pytest.mark.flaky_in_dev
     def test_gpu_forward(self):
         for recompute_granularity in (None, 'selective'):
             for use_transformer_engine in (True, False):

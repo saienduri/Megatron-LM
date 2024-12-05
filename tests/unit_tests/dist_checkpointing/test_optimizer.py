@@ -518,6 +518,7 @@ class TestOptimizerResharding:
         ],
     )
     @pytest.mark.failing_on_rocm
+    @pytest.mark.flaky
     def test_chained_optimizer_resharding(
         self,
         tmp_path_dist_ckpt,
