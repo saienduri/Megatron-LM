@@ -10,11 +10,11 @@
 export GPU_MAX_HW_QUEUES=2
 export TORCH_NCCL_HIGH_PRIORITY=1
 export NCCL_CHECKS_DISABLE=1
-export NCCL_IB_HCA=rdma0,rdma1,rdma2,rdma3,rdma4,rdma5,rdma6,rdma7 
+export NCCL_IB_HCA=bnxt_re0,bnxt_re1,bnxt_re2,bnxt_re3,bnxt_re4,bnxt_re5,bnxt_re6,bnxt_re7
 export NCCL_IB_GID_INDEX=3
 export NCCL_CROSS_NIC=0
-export NCCL_SOCKET_IFNAME=ens50f0np0 # network interface  
-export GLOO_SOCKET_IFNAME=ens50f0np0 # network interface
+export NCCL_SOCKET_IFNAME=ens51f0np0 # network interface  
+export GLOO_SOCKET_IFNAME=ens51f0np0 # network interface
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NCCL_PROTO=Simple
 export RCCL_MSCCL_ENABLE=0
